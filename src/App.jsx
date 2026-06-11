@@ -1,537 +1,104 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import * as d3 from "d3";
+import * as topojson from "topojson-client";
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const MOCK_STREAMS = [
-  { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, lat: 35.6595, lng: 139.7004, color: "#FF3B5C" },
-  { id: 2, title: "Live from Carnival — Rio streets", category: "Events", location: "Rio de Janeiro, Brazil", country: "🇧🇷", viewers: 8702, lat: -22.9068, lng: -43.1729, color: "#6C63FF" },
-  { id: 3, title: "Sunset hike in the Alps", category: "Nature", location: "Zermatt, Switzerland", country: "🇨🇭", viewers: 1540, lat: 46.0207, lng: 7.7491, color: "#00C9A7" },
-  { id: 4, title: "Jazz session in New Orleans", category: "Music", location: "New Orleans, USA", country: "🇺🇸", viewers: 2890, lat: 29.9511, lng: -90.0715, color: "#FFB347" },
-  { id: 5, title: "Morning market in Marrakech", category: "City Life", location: "Marrakech, Morocco", country: "🇲🇦", viewers: 977, lat: 31.6295, lng: -7.9811, color: "#FF6B9D" },
-  { id: 6, title: "Formula E race — live pit lane", category: "Sports", location: "Monaco", country: "🇲🇨", viewers: 12430, lat: 43.7384, lng: 7.4246, color: "#4ECDC4" },
-  { id: 7, title: "Cherry blossom walk — Kyoto", category: "Travel", location: "Kyoto, Japan", country: "🇯🇵", viewers: 5612, lat: 35.0116, lng: 135.7681, color: "#FF3B5C" },
-  { id: 8, title: "Street food tour — Bangkok", category: "Travel", location: "Bangkok, Thailand", country: "🇹🇭", viewers: 4201, lat: 13.7563, lng: 100.5018, color: "#6C63FF" },
+  { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
+  { id: 2, title: "Live from Carnival — Rio streets", category: "Events", location: "Rio de Janeiro, Brazil", country: "🇧🇷", viewers: 8702, color: "#6C63FF", emoji: "🎉", lat: -22.9, lon: -43.17 },
+  { id: 3, title: "Sunset hike in the Alps", category: "Nature", location: "Zermatt, Switzerland", country: "🇨🇭", viewers: 1540, color: "#00C9A7", emoji: "🌿", lat: 46.0, lon: 7.75 },
+  { id: 4, title: "Jazz session in New Orleans", category: "Music", location: "New Orleans, USA", country: "🇺🇸", viewers: 2890, color: "#FFB347", emoji: "🎵", lat: 29.95, lon: -90.07 },
+  { id: 5, title: "Morning market in Marrakech", category: "City Life", location: "Marrakech, Morocco", country: "🇲🇦", viewers: 977, color: "#FF6B9D", emoji: "🏙️", lat: 31.63, lon: -7.99 },
+  { id: 6, title: "Formula E race — live pit lane", category: "Sports", location: "Monaco", country: "🇲🇨", viewers: 12430, color: "#4ECDC4", emoji: "⚽", lat: 43.74, lon: 7.43 },
+  { id: 7, title: "Cherry blossom walk — Kyoto", category: "Travel", location: "Kyoto, Japan", country: "🇯🇵", viewers: 5612, color: "#FF3B5C", emoji: "🌸", lat: 35.01, lon: 135.77 },
+  { id: 8, title: "Street food tour — Bangkok", category: "Travel", location: "Bangkok, Thailand", country: "🇹🇭", viewers: 4201, color: "#A78BFA", emoji: "🍜", lat: 13.75, lon: 100.5 },
 ];
 
-const CATEGORIES = ["All", "Travel", "Walking", "Nature", "Music", "Sports", "Events", "City Life", "Random"];
-
+const CATEGORIES = ["All", "Travel", "Walking", "Nature", "Music", "Sports", "Events", "City Life"];
 const CHAT_MESSAGES = [
-  { user: "alex_w", text: "this is incredible!", time: "2s" },
-  { user: "sofia_m", text: "где это?? 😍", time: "5s" },
-  { user: "james_k", text: "I want to be there right now", time: "8s" },
-  { user: "yuki_t", text: "beautiful 🌸", time: "12s" },
-  { user: "marco_r", text: "how is it so crowded already", time: "15s" },
+  { user: "alex_w", text: "this is incredible!" },
+  { user: "sofia_m", text: "where is this place? 😍" },
+  { user: "james_k", text: "I want to be there right now" },
+  { user: "yuki_t", text: "beautiful 🌸" },
 ];
 
-// ─── STYLES ───────────────────────────────────────────────────────────────────
 const styles = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght=400;500;600;700&family=Inter:wght=400;500;600&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --void: #050512; /* ძალიან მუქი ლურჯი ფონი */
-  --surface: #0B0B1E;
-  --card: #12122B;
-  --card2: #161636;
-  --border: #23234E;
-  --red: #FF3B5C;
-  --violet: #6C63FF;
-  --live-purple: #4D13D1; /* მუქი იისფერი ლაივისთვის */
-  --teal: #00C9A7;
-  --text: #F0F0F8;
-  --sub: #8888AA;
-  --muted: #444477;
+  --void: #050512; --surface: #0B0B1E; --card: #12122B; --card2: #161636;
+  --border: #23234E; --violet: #6C63FF; --live-purple: #4D13D1;
+  --text: #F0F0F8; --sub: #8888AA;
 }
-
 body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
-
 .app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-
-/* SIDEBAR NAV */
-.sidebar {
-  width: 64px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 0;
-  gap: 4px;
-  flex-shrink: 0;
-  z-index: 10;
-}
-.sidebar-logo {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--violet);
-  margin-bottom: 24px;
-  letter-spacing: -0.5px;
-}
-.nav-btn {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  border: none;
-  background: transparent;
-  color: var(--sub);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.18s ease;
-  position: relative;
-}
+.sidebar { width: 64px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 8px; flex-shrink: 0; z-index: 10; }
+.sidebar-logo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--violet); margin-bottom: 24px; }
+.nav-btn { width: 44px; height: 44px; border-radius: 12px; border: none; background: transparent; color: var(--sub); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
 .nav-btn:hover { background: var(--card2); color: var(--text); }
 .nav-btn.active { background: rgba(108,99,255,0.15); color: var(--violet); }
-.nav-btn.go-live {
-  background: var(--live-purple);
-  color: white;
-  margin-top: 8px;
-  font-size: 22px;
-  box-shadow: 0 4px 20px rgba(77,19,209,0.4);
-}
-.nav-btn.go-live:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(77,19,209,0.5); }
+.nav-btn.go-live { background: var(--live-purple); color: white; margin-top: 8px; font-size: 22px; box-shadow: 0 4px 20px rgba(77,19,209,0.4); }
 .nav-spacer { flex: 1; }
-
-/* MAIN CONTENT */
-.main { flex: 1; display: flex; overflow: hidden; }
-
-/* HOME SCREEN */
-.home { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.home-header {
-  padding: 20px 28px 0;
-  display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0;
-}
-.home-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 22px; font-weight: 700;
-  color: var(--text);
-}
+.main { flex: 1; display: flex; overflow: hidden; background: var(--void); }
+.home { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; }
+.home-header { padding: 20px 28px 0; display: flex; align-items: center; justify-content: space-between; }
+.home-title { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; }
 .home-title span { color: var(--violet); }
-.search-btn {
-  width: 36px; height: 36px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--sub);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
-}
-.search-btn:hover { border-color: var(--violet); color: var(--text); }
-
-/* CATEGORIES */
-.categories {
-  display: flex; gap: 8px;
-  padding: 16px 28px 0;
-  overflow-x: auto;
-  flex-shrink: 0;
-  scrollbar-width: none;
-}
+.categories { display: flex; gap: 8px; padding: 16px 28px 0; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .categories::-webkit-scrollbar { display: none; }
-.cat-pill {
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--sub);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.cat-pill:hover { border-color: var(--violet); color: var(--text); }
+.cat-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--sub); font-size: 13px; cursor: pointer; white-space: nowrap; }
 .cat-pill.active { background: var(--live-purple); border-color: var(--live-purple); color: white; }
-
-/* STREAM GRID */
-.stream-scroll { flex: 1; overflow-y: auto; padding: 16px 28px 28px; z-index: 2; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sub);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 12px;
-}
-.stream-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-  margin-bottom: 28px;
-}
-.stream-card {
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--card2);
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  border: 1px solid var(--border);
-  position: relative;
-}
-.stream-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.5); border-color: var(--muted); }
-.stream-thumb {
-  width: 100%; height: 148px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 42px;
-  position: relative;
-  overflow: hidden;
-}
-.stream-thumb-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(5,5,18,0) 40%, rgba(5,5,18,0.85) 100%);
-}
-.live-badge {
-  position: absolute; top: 10px; left: 10px;
-  background: var(--live-purple); /* შეცვლილია მუქ იისფერზე */
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 3px 7px;
-  border-radius: 4px;
-  display: flex; align-items: center; gap: 4px;
-}
-.live-dot {
-  width: 6px; height: 6px;
-  background: white;
-  border-radius: 50%;
-  animation: pulse-dot 1.2s ease-in-out infinite;
-}
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.4); }
-}
-.viewer-count {
-  position: absolute; top: 10px; right: 10px;
-  background: rgba(0,0,0,0.65);
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 20px;
-  backdrop-filter: blur(4px);
-}
-.stream-info { padding: 10px 12px 12px; }
-.stream-title {
-  font-size: 13px; font-weight: 600;
-  color: var(--text);
-  line-height: 1.3;
-  margin-bottom: 5px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.stream-location { font-size: 12px; color: var(--sub); display: flex; align-items: center; gap: 4px; }
-
-/* MAP SCREEN */
-.map-screen { flex: 1; position: relative; overflow: hidden; background: var(--void); }
-.map-bg {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 80% 50% at 50% 60%, rgba(108,99,255,0.05) 0%, transparent 70%);
-}
-.map-grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(35,35,78,0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(35,35,78,0.3) 1px, transparent 1px);
-  background-size: 60px 60px;
-}
-
-/* მბრუნავი პატარა დედამიწის სტილი ფონზე */
-.earth-container {
-  position: absolute;
-  top: 55%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 280px; height: 280px;
-  opacity: 0.25;
-  pointer-events: none;
-  z-index: 1;
-}
-.earth-sphere {
-  width: 100%; height: 100%;
-  border-radius: 50%;
-  border: 2px solid rgba(108, 99, 255, 0.4);
-  background: radial-gradient(circle at 30% 30%, rgba(108, 99, 255, 0.1) 0%, transparent 80%);
-  position: relative;
-  box-shadow: 0 0 40px rgba(108, 99, 255, 0.15);
-  animation: rotateEarth 20s linear infinite;
-}
-.earth-sphere::before, .earth-sphere::after {
-  content: '';
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  border: 1px dashed rgba(108, 99, 255, 0.25);
-}
-.earth-sphere::after { transform: rotateY(90deg); }
-
-@keyframes rotateEarth {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.map-continents {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; color: rgba(255,255,255,0.02);
-  letter-spacing: 0.3em;
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  z-index: 1;
-}
-.map-marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  z-index: 5;
-}
-.map-marker:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 10; }
-.marker-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  opacity: 0;
-  animation: marker-ripple 2s ease-out infinite;
-}
-@keyframes marker-ripple {
-  0% { width: 100%; height: 100%; top: 0; left: 0; opacity: 0.6; }
-  100% { width: 200%; height: 200%; top: -50%; left: -50%; opacity: 0; }
-}
-.marker-inner {
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  border: 2px solid rgba(255,255,255,0.2);
-  position: relative;
-  z-index: 1;
-}
-.marker-viewers {
-  position: absolute; bottom: -18px; left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px; font-weight: 600;
-  color: rgba(255,255,255,0.7);
-  white-space: nowrap;
-  background: rgba(0,0,0,0.6);
-  padding: 2px 6px;
-  border-radius: 10px;
-}
-.map-controls {
-  position: absolute; top: 20px; left: 0; right: 0;
-  padding: 0 24px;
-  display: flex; gap: 12px; align-items: center;
-  z-index: 6;
-}
-.map-search {
-  flex: 1;
-  background: rgba(18,18,43,0.95);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 16px;
-  color: var(--text);
-  font-size: 14px;
-  font-family: 'Inter', sans-serif;
-  backdrop-filter: blur(8px);
-  outline: none;
-  transition: border-color 0.15s;
-}
-.map-search:focus { border-color: var(--violet); }
-.map-stream-count {
-  background: rgba(18,18,43,0.95);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 13px;
-  color: var(--sub);
-  backdrop-filter: blur(8px);
-  white-space: nowrap;
-}
-.map-stream-count span { color: var(--violet); font-weight: 700; }
-
-/* LIVE VIEWER */
-.viewer-screen { flex: 1; background: #000; display: flex; position: relative; overflow: hidden; }
-.viewer-video {
-  flex: 1;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 80px;
-  background: radial-gradient(ellipse at center, #12122b 0%, #050512 100%);
-  position: relative;
-}
-.viewer-video-label {
-  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-  font-size: 13px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; font-family: 'Space Grotesk', sans-serif;
-}
-.viewer-top {
-  position: absolute; top: 0; left: 0; right: 320px; padding: 20px 24px;
-  background: linear-gradient(to bottom, rgba(5,5,18,0.8) 0%, transparent 100%);
-  display: flex; align-items: flex-start; justify-content: space-between; pointer-events: none;
-}
-.viewer-back {
-  width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px; color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  pointer-events: all; transition: background 0.15s;
-}
-.viewer-back:hover { background: rgba(255,255,255,0.1); }
-.viewer-info { display: flex; flex-direction: column; gap: 4px; }
-.viewer-title { font-size: 16px; font-weight: 600; color: white; font-family: 'Space Grotesk', sans-serif; }
-.viewer-loc { font-size: 13px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 4px; }
-.viewer-viewers {
-  background: rgba(0,0,0,0.5); border-radius: 20px; padding: 5px 12px; font-size: 13px; font-weight: 600;
-  color: white; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(4px);
-}
-.viewer-bottom {
-  position: absolute; bottom: 0; left: 0; right: 320px; padding: 24px;
-  background: linear-gradient(to top, rgba(5,5,18,0.9) 0%, transparent 100%);
-  display: flex; align-items: flex-end; justify-content: space-between;
-}
-.viewer-creator { display: flex; align-items: center; gap: 10px; }
-.creator-avatar {
-  width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--live-purple), var(--violet));
-  display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid rgba(255,255,255,0.2);
-}
-.creator-name { font-size: 14px; font-weight: 600; color: white; }
-.cat-badge-sm {
-  display: inline-block; padding: 2px 8px; background: rgba(108,99,255,0.2);
-  border: 1px solid rgba(108,99,255,0.4); border-radius: 10px; font-size: 11px; color: #a8a3ff; margin-top: 3px;
-}
-.reaction-btn {
-  width: 44px; height: 44px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 50%; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: transform 0.15s; backdrop-filter: blur(4px);
-}
-.reaction-btn:hover { transform: scale(1.1); }
+.stream-scroll { flex: 1; overflow-y: auto; padding: 16px 28px 28px; }
+.section-label { font-size: 11px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.stream-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stream-card { border-radius: 16px; overflow: hidden; background: var(--card2); cursor: pointer; border: 1px solid var(--border); position: relative; transition: transform 0.2s; }
+.stream-card:hover { transform: translateY(-2px); border-color: var(--violet); }
+.stream-thumb { width: 100%; height: 148px; display: flex; align-items: center; justify-content: center; font-size: 42px; position: relative; }
+.live-badge { position: absolute; top: 10px; left: 10px; background: var(--live-purple); color: white; font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+.live-dot { width: 6px; height: 6px; background: white; border-radius: 50%; }
+.viewer-count { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: white; font-size: 11px; padding: 3px 8px; border-radius: 20px; }
+.stream-info { padding: 12px; }
+.stream-title { font-size: 13px; font-weight: 600; line-height: 1.4; margin-bottom: 5px; color: var(--text); }
+.stream-location { font-size: 12px; color: var(--sub); }
+.map-screen { flex: 1; position: relative; overflow: hidden; background: var(--void); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+.globe-canvas { display: block; border-radius: 50%; }
+.globe-tooltip { position: absolute; pointer-events: none; z-index: 20; background: rgba(12,12,35,0.97); border: 1px solid #6C63FF; border-radius: 12px; padding: 10px 14px; min-width: 190px; }
+.globe-pills { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; padding: 10px 20px 0; max-width: 700px; }
+.globe-pill { background: rgba(18,18,43,0.9); border-radius: 20px; padding: 5px 12px; color: #F0F0F8; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; border: 1px solid #23234E; }
+.globe-pill:hover { background: rgba(108,99,255,0.2); }
+.globe-stream-count { background: rgba(18,18,43,0.9); border: 1px solid var(--border); border-radius: 10px; padding: 7px 14px; font-size: 13px; color: var(--sub); position: absolute; top: 18px; right: 22px; }
+.globe-stream-count span { color: var(--violet); font-weight: 700; }
+.viewer-screen { flex: 1; background: #000; display: flex; position: relative; overflow: hidden; height: 100%; }
+.viewer-video { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 80px; background: radial-gradient(ellipse at center, #12122b 0%, #050512 100%); position: relative; }
+.viewer-video-label { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 13px; color: rgba(255,255,255,0.25); letter-spacing: 0.05em; }
+.viewer-top { position: absolute; top: 0; left: 0; right: 320px; padding: 20px 24px; background: linear-gradient(to bottom, rgba(5,5,18,0.8) 0%, transparent 100%); display: flex; align-items: flex-start; justify-content: space-between; }
+.viewer-back { width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.viewer-title { font-size: 16px; font-weight: 600; color: white; }
+.viewer-viewers { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 5px 12px; font-size: 13px; color: white; }
+.viewer-bottom { position: absolute; bottom: 0; left: 0; right: 320px; padding: 24px; background: linear-gradient(to top, rgba(5,5,18,0.9) 0%, transparent 100%); display: flex; justify-content: space-between; align-items: flex-end; }
+.reaction-btn { width: 44px; height: 44px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .floating-hearts { position: absolute; bottom: 80px; right: 340px; pointer-events: none; }
 .heart { position: absolute; font-size: 22px; animation: float-heart 1.2s ease-out forwards; }
-@keyframes float-heart {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-120px) scale(0.5) rotate(15deg); }
-}
-
-/* CHAT PANEL */
-.chat-panel {
-  width: 320px; background: rgba(11,11,30,0.95); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; flex-shrink: 0; backdrop-filter: blur(8px);
-}
-.chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.chat-title { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+@keyframes float-heart { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-120px) scale(0.5); } }
+.chat-panel { width: 320px; background: rgba(11,11,30,0.95); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+.chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.chat-title { font-size: 14px; font-weight: 600; color: var(--text); }
 .chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
-.chat-msg { display: flex; flex-direction: column; gap: 2px; }
-.chat-username { font-size: 11px; font-weight: 600; color: var(--violet); }
-.chat-text { font-size: 13px; color: rgba(240,240,248,0.85); line-height: 1.4; }
-.chat-time { font-size: 10px; color: var(--muted); }
+.chat-msg { display: flex; flex-direction: column; }
+.chat-username { font-size: 11px; font-weight: 600; color: var(--violet); margin-bottom: 2px; }
+.chat-text { font-size: 13px; color: rgba(240,240,248,0.85); }
 .chat-input-area { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-.chat-input {
-  flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 8px 12px; color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.15s;
-}
-.chat-input:focus { border-color: var(--violet); }
-.chat-send {
-  width: 36px; height: 36px; background: var(--live-purple); border: none; border-radius: 10px;
-  color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s;
-}
-.chat-send:hover { opacity: 0.85; }
-
-/* CREATOR SCREEN */
-.creator-screen { flex: 1; display: flex; overflow: hidden; }
-.creator-preview {
-  flex: 1; background: radial-gradient(ellipse at center, #161636 0%, #050512 100%);
-  display: flex; align-items: center; justify-content: center; font-size: 100px; position: relative;
-}
-.creator-controls-overlay { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
-.icon-btn {
-  width: 40px; height: 40px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px; color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(4px); transition: background 0.15s;
-}
-.icon-btn:hover { background: rgba(255,255,255,0.1); }
-.creator-panel {
-  width: 320px; background: var(--surface); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; padding: 28px 24px; gap: 20px; overflow-y: auto; flex-shrink: 0;
-}
-.creator-panel-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-label { font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.06em; }
-.form-input {
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 10px 14px; color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.15s;
-}
-.form-input:focus { border-color: var(--violet); }
-.char-count { font-size: 11px; color: var(--muted); text-align: right; }
-.cat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-.cat-chip {
-  padding: 5px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card);
-  color: var(--sub); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
-}
-.cat-chip:hover { border-color: var(--violet); color: var(--text); }
-.cat-chip.active { background: rgba(108,99,255,0.15); border-color: var(--violet); color: var(--violet); }
-.location-row { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
-.location-text { flex: 1; font-size: 14px; color: var(--text); }
-.location-edit { font-size: 12px; color: var(--violet); cursor: pointer; }
-.go-live-btn {
-  width: 100%; padding: 14px; background: var(--live-purple); border: none; border-radius: 14px;
-  color: white; font-size: 16px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; cursor: pointer;
-  transition: all 0.18s ease; box-shadow: 0 4px 24px rgba(77,19,209,0.35); margin-top: auto;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.go-live-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 30px rgba(77,19,209,0.5); }
-
-/* PROFILE */
-.profile-screen { flex: 1; display: flex; overflow: hidden; }
-.profile-main { flex: 1; overflow-y: auto; padding: 32px 40px; }
-.profile-header { display: flex; align-items: center; gap: 24px; margin-bottom: 40px; }
-.profile-avatar {
-  width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--live-purple) 0%, var(--violet) 100%);
-  display: flex; align-items: center; justify-content: center; font-size: 36px; border: 3px solid var(--border); flex-shrink: 0;
-}
-.profile-name { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; color: var(--text); }
-.profile-handle { font-size: 14px; color: var(--sub); margin-top: 4px; }
-.profile-joined { font-size: 12px; color: var(--muted); margin-top: 6px; }
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 36px; }
-.stat-card { background: var(--card2); border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; }
-.stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
-.stat-label { font-size: 12px; color: var(--sub); font-weight: 500; }
-.recent-section { margin-bottom: 28px; }
-.recent-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
-.recent-list { display: flex; flex-direction: column; gap: 10px; }
-.recent-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; }
-.recent-info { flex: 1; }
-.recent-name { font-size: 14px; font-weight: 500; color: var(--text); }
-.recent-meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
-.recent-stat { font-size: 12px; color: var(--muted); text-align: right; }
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* TRANSITIONS */
-.screen-enter { animation: screen-in 0.22s ease-out; }
-@keyframes screen-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+.chat-input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--text); outline: none; font-size: 13px; }
+.chat-send { width: 36px; height: 36px; background: var(--live-purple); border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.screen-enter { animation: screen-in 0.2s ease-out; }
+@keyframes screen-in { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
 `;
 
-// ─── COMPONENTS ───────────────────────────────────────────────────────────────
-
-function LiveBadge() {
-  return (
-    <div className="live-badge">
-      <div className="live-dot" />
-      LIVE
-    </div>
-  );
-}
-
 function StreamCard({ stream, onClick }) {
-  const emojis = { Travel: "✈️", Walking: "🚶", Nature: "🌿", Music: "🎵", Sports: "⚽", Events: "🎉", "City Life": "🏙️", Random: "🎲" };
   return (
     <div className="stream-card" onClick={() => onClick(stream)}>
       <div className="stream-thumb" style={{ background: `radial-gradient(ellipse at center, ${stream.color}22, #050512)` }}>
-        <span style={{ zIndex: 1 }}>{emojis[stream.category] || "📡"}</span>
-        <div className="stream-thumb-overlay" />
-        <LiveBadge />
+        <span>{stream.emoji}</span>
+        <div className="live-badge"><div className="live-dot" />LIVE</div>
         <div className="viewer-count">👁 {stream.viewers.toLocaleString()}</div>
       </div>
       <div className="stream-info">
@@ -542,38 +109,25 @@ function StreamCard({ stream, onClick }) {
   );
 }
 
-function HomeScreen({ onStreamClick, onGoLive }) {
+function HomeScreen({ onStreamClick }) {
   const [activeCategory, setActiveCategory] = useState("All");
   const filtered = activeCategory === "All" ? MOCK_STREAMS : MOCK_STREAMS.filter(s => s.category === activeCategory);
-
   return (
     <div className="home screen-enter">
-      <div className="home-header">
-        <div className="home-title">🌍 <span>Momentra</span></div>
-        <button className="search-btn">🔍</button>
-      </div>
-
+      <div className="home-header"><div className="home-title">🌍 <span>Momentra</span></div></div>
       <div className="categories">
         {CATEGORIES.map(c => (
-          <button key={c} className={`cat-pill ${activeCategory === c ? "active" : ""}`} onClick={() => setActiveCategory(c)}>
-            {c}
-          </button>
+          <button key={c} className={`cat-pill ${activeCategory === c ? "active" : ""}`} onClick={() => setActiveCategory(c)}>{c}</button>
         ))}
       </div>
-
       <div className="stream-scroll">
-        <div style={{ marginBottom: 16, marginTop: 4 }}>
-          <div className="section-label">🔥 Trending Now — {MOCK_STREAMS.length} live</div>
-          <div className="stream-grid">
-            {MOCK_STREAMS.slice(0, 4).map(s => <StreamCard key={s.id} stream={s} onClick={onStreamClick} />)}
-          </div>
+        <div style={{ marginBottom: 16 }}>
+          <div className="section-label">🔥 Trending Now</div>
+          <div className="stream-grid">{MOCK_STREAMS.slice(0, 3).map(s => <StreamCard key={s.id} stream={s} onClick={onStreamClick} />)}</div>
         </div>
-
         <div>
-          <div className="section-label">{activeCategory === "All" ? "All Lives" : activeCategory}</div>
-          <div className="stream-grid">
-            {filtered.map(s => <StreamCard key={s.id} stream={s} onClick={onStreamClick} />)}
-          </div>
+          <div className="section-label">All Live Streams</div>
+          <div className="stream-grid">{filtered.map(s => <StreamCard key={s.id} stream={s} onClick={onStreamClick} />)}</div>
         </div>
       </div>
     </div>
@@ -581,43 +135,167 @@ function HomeScreen({ onStreamClick, onGoLive }) {
 }
 
 function MapScreen({ onStreamClick }) {
-  const markerPositions = [
-    { stream: MOCK_STREAMS[0], x: "72%", y: "28%" },
-    { stream: MOCK_STREAMS[1], x: "30%", y: "65%" },
-    { stream: MOCK_STREAMS[2], x: "52%", y: "23%" },
-    { stream: MOCK_STREAMS[3], x: "22%", y: "38%" },
-    { stream: MOCK_STREAMS[4], x: "50%", y: "36%" },
-    { stream: MOCK_STREAMS[5], x: "54%", y: "24%" },
-    { stream: MOCK_STREAMS[6], x: "71%", y: "30%" },
-    { stream: MOCK_STREAMS[7], x: "74%", y: "40%" },
-  ];
+  const canvasRef = useRef(null);
+  const st = useRef({ rotation: [20, -20], dragging: false, autoRotate: true, hoveredStream: null, lastX: 0, lastY: 0 });
+  const [tooltip, setTooltip] = useState(null);
+  const proj = useRef(null);
+  const pathFn = useRef(null);
+  const land = useRef(null);
+  const animId = useRef(null);
+
+  function rotateToStream(s) {
+    st.current.autoRotate = false;
+    const target = [-s.lon, -s.lat];
+    const start = [...st.current.rotation];
+    const t0 = performance.now();
+    function tween(t) {
+      const p = Math.min((t - t0) / 700, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      st.current.rotation[0] = start[0] + (target[0] - start[0]) * e;
+      st.current.rotation[1] = start[1] + (target[1] - start[1]) * e;
+      if (p < 1) requestAnimationFrame(tween);
+      else setTimeout(() => { st.current.autoRotate = true; }, 1500);
+    }
+    requestAnimationFrame(tween);
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const W = 500, H = 500;
+    const R = 220;
+    const s = st.current;
+
+    async function init() {
+      const world = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(r => r.json());
+      land.current = topojson.feature(world, world.objects.land);
+      proj.current = d3.geoOrthographic().scale(R).translate([W / 2, H / 2]).clipAngle(90).rotate(s.rotation);
+      pathFn.current = d3.geoPath(proj.current, ctx);
+      loop();
+    }
+
+    function draw() {
+      if (!proj.current || !pathFn.current || !land.current) return;
+      proj.current.rotate(s.rotation);
+      ctx.clearRect(0, 0, W, H);
+
+      ctx.beginPath(); pathFn.current({ type: "Sphere" });
+      ctx.fillStyle = "#080820"; ctx.fill();
+
+      ctx.beginPath(); pathFn.current(d3.geoGraticule()());
+      ctx.strokeStyle = "#16163A"; ctx.lineWidth = 0.5; ctx.stroke();
+
+      ctx.beginPath(); pathFn.current(land.current);
+      ctx.fillStyle = "#1C1C4A"; ctx.fill();
+      ctx.strokeStyle = "#2D2D6E"; ctx.lineWidth = 0.6; ctx.stroke();
+
+      ctx.beginPath(); pathFn.current({ type: "Sphere" });
+      ctx.strokeStyle = "#23234E"; ctx.lineWidth = 1.5; ctx.stroke();
+
+      MOCK_STREAMS.forEach(stream => {
+        const c = proj.current([stream.lon, stream.lat]);
+        if (!c) return;
+        const angle = d3.geoDistance([stream.lon, stream.lat], [-s.rotation[0], -s.rotation[1]]);
+        if (angle > Math.PI / 2) return;
+        const [px, py] = c;
+        const isHov = s.hoveredStream?.id === stream.id;
+        const size = isHov ? 9 : 6;
+        const phase = (Date.now() % 2000) / 2000;
+        ctx.beginPath();
+        ctx.arc(px, py, size + phase * 18, 0, Math.PI * 2);
+        ctx.strokeStyle = stream.color + Math.floor((1 - phase) * 160).toString(16).padStart(2, "0");
+        ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fillStyle = stream.color; ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.font = `${isHov ? 16 : 13}px serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(stream.emoji, px, py - size - 5);
+      });
+    }
+
+    function loop() {
+      if (s.autoRotate) s.rotation[0] += 0.1;
+      draw();
+      animId.current = requestAnimationFrame(loop);
+    }
+
+    function getHovered(mx, my) {
+      if (!proj.current) return null;
+      return MOCK_STREAMS.find(stream => {
+        const c = proj.current([stream.lon, stream.lat]);
+        if (!c) return false;
+        if (d3.geoDistance([stream.lon, stream.lat], [-s.rotation[0], -s.rotation[1]]) > Math.PI / 2) return false;
+        return Math.hypot(mx - c[0], my - c[1]) < 18;
+      }) || null;
+    }
+
+    function toCanvas(e) {
+      const r = canvas.getBoundingClientRect();
+      return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)];
+    }
+
+    const onMove = e => {
+      const [mx, my] = toCanvas(e);
+      if (s.dragging) {
+        s.autoRotate = false;
+        s.rotation[0] += (e.clientX - s.lastX) * 0.4;
+        s.rotation[1] = Math.max(-70, Math.min(70, s.rotation[1] - (e.clientY - s.lastY) * 0.3));
+        s.lastX = e.clientX; s.lastY = e.clientY;
+        setTooltip(null); return;
+      }
+      const found = getHovered(mx, my);
+      s.hoveredStream = found;
+      canvas.style.cursor = found ? "pointer" : "grab";
+      if (found) {
+        const r = canvas.getBoundingClientRect();
+        const [px, py] = proj.current([found.lon, found.lat]);
+        setTooltip({ s: found, x: px * (r.width / W), y: py * (r.height / H) });
+      } else setTooltip(null);
+    };
+    const onDown = e => { s.dragging = true; s.lastX = e.clientX; s.lastY = e.clientY; s.autoRotate = false; canvas.style.cursor = "grabbing"; };
+    const onUp = () => { s.dragging = false; canvas.style.cursor = "grab"; setTimeout(() => { s.autoRotate = true; }, 2000); };
+    const onLeave = () => { s.dragging = false; s.hoveredStream = null; setTooltip(null); setTimeout(() => { s.autoRotate = true; }, 1000); };
+    const onClick = () => { if (s.hoveredStream) onStreamClick(s.hoveredStream); };
+
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mousedown", onDown);
+    canvas.addEventListener("mouseup", onUp);
+    canvas.addEventListener("mouseleave", onLeave);
+    canvas.addEventListener("click", onClick);
+
+    init();
+
+    return () => {
+      cancelAnimationFrame(animId.current);
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mousedown", onDown);
+      canvas.removeEventListener("mouseup", onUp);
+      canvas.removeEventListener("mouseleave", onLeave);
+      canvas.removeEventListener("click", onClick);
+    };
+  }, []);
 
   return (
     <div className="map-screen screen-enter">
-      <div className="map-bg" />
-      <div className="map-grid" />
-      
-      {/* მბრუნავი პატარა დედამიწა უკანა ფონზე */}
-      <div className="earth-container">
-        <div className="earth-sphere" />
-      </div>
-
-      <div className="map-continents">WORLD MAP</div>
-
-      {markerPositions.map(({ stream, x, y }, i) => (
-        <div key={stream.id} className="map-marker" style={{ left: x, top: y }} onClick={() => onStreamClick(stream)}>
-          <div className="marker-ring" style={{ color: stream.color }} />
-          <div className="marker-inner" style={{ background: `${stream.color}22`, borderColor: `${stream.color}66` }}>
-            {["🚶", "🎉", "🌿", "🎵", "🏙️", "⚽", "🌸", "🍜"][i]}
-          </div>
-          <div className="marker-viewers">👁 {(stream.viewers / 1000).toFixed(1)}k</div>
+      <canvas ref={canvasRef} width={500} height={500} className="globe-canvas" />
+      {tooltip && (
+        <div className="globe-tooltip" style={{ left: tooltip.x + 20, top: tooltip.y - 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#F0F0F8", marginBottom: 3 }}>{tooltip.s.emoji} {tooltip.s.title}</div>
+          <div style={{ fontSize: 12, color: "#8888AA" }}>📍 {tooltip.s.location}</div>
+          <div style={{ fontSize: 12, color: "#6C63FF", marginTop: 3 }}>👁 {tooltip.s.viewers.toLocaleString()} viewers</div>
         </div>
-      ))}
-
-      <div className="map-controls">
-        <input className="map-search" placeholder="🔍 Search city or location..." />
-        <div className="map-stream-count"><span>{MOCK_STREAMS.length}</span> live now</div>
+      )}
+      <div className="globe-pills">
+        {MOCK_STREAMS.map(s => (
+          <button key={s.id} className="globe-pill" style={{ borderColor: s.color + "55" }} onClick={() => rotateToStream(s)}>
+            <span style={{ width: 7, height: 7, background: s.color, borderRadius: "50%", display: "inline-block" }} />
+            {s.emoji} {s.location}
+          </button>
+        ))}
       </div>
+      <div className="globe-stream-count"><span>{MOCK_STREAMS.length}</span> streams active</div>
     </div>
   );
 }
@@ -626,87 +304,54 @@ function ViewerScreen({ stream, onBack }) {
   const [hearts, setHearts] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState(CHAT_MESSAGES);
-  const [viewers, setViewers] = useState(stream.viewers);
-
-  useEffect(() => {
-    const t = setInterval(() => setViewers(v => v + Math.floor(Math.random() * 5) - 1), 4000);
-    return () => clearInterval(t);
-  }, []);
 
   const addHeart = () => {
     const id = Date.now();
     setHearts(h => [...h, { id, x: Math.random() * 30 }]);
-    setTimeout(() => setHearts(h => h.filter(h => h.id !== id)), 1200);
+    setTimeout(() => setHearts(h => h.filter(i => i.id !== id)), 1200);
   };
 
   const sendMessage = () => {
     if (!chatInput.trim()) return;
-    setMessages(m => [...m, { user: "you", text: chatInput, time: "now" }]);
+    setMessages(m => [...m, { user: "you", text: chatInput }]);
     setChatInput("");
   };
 
   return (
     <div className="viewer-screen screen-enter">
       <div className="viewer-video">
-        <span>🎬</span>
-        <div className="viewer-video-label">LIVE STREAM</div>
-
+        <span>{stream.emoji}</span>
+        <div className="viewer-video-label">LIVE DATA STREAM</div>
         <div className="viewer-top">
           <button className="viewer-back" onClick={onBack}>←</button>
-          <div className="viewer-info">
-            <div className="live-badge" style={{ position: "static", display: "inline-flex", marginBottom: 4 }}>
-              <div className="live-dot" />LIVE
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div className="viewer-title">{stream.title}</div>
-            <div className="viewer-loc">📍 {stream.location}</div>
+            <div style={{ color: "var(--sub)", fontSize: 13 }}>📍 {stream.location}</div>
           </div>
-          <div className="viewer-stats">
-            <div className="viewer-viewers">👁 {viewers.toLocaleString()}</div>
-          </div>
+          <div className="viewer-viewers">👁 {stream.viewers.toLocaleString()}</div>
         </div>
-
         <div className="viewer-bottom">
-          <div className="viewer-creator">
-            <div className="creator-avatar">🎙</div>
-            <div>
-              <div className="creator-name">@momentra_live</div>
-              <div className="cat-badge-sm">{stream.category}</div>
-            </div>
-          </div>
           <button className="reaction-btn" onClick={addHeart}>❤️</button>
         </div>
-
         <div className="floating-hearts">
-          {hearts.map(h => (
-            <div key={h.id} className="heart" style={{ right: h.x }}>❤️</div>
-          ))}
+          {hearts.map(h => <div key={h.id} className="heart" style={{ right: h.x }}>❤️</div>)}
         </div>
       </div>
-
       <div className="chat-panel">
         <div className="chat-header">
-          <div className="chat-title">💬 Live Chat</div>
+          <div className="chat-title">💬 Chat Session</div>
           <div style={{ fontSize: 12, color: "var(--sub)" }}>{stream.country}</div>
         </div>
         <div className="chat-messages">
           {messages.map((m, i) => (
             <div key={i} className="chat-msg">
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span className="chat-username">{m.user}</span>
-                <span className="chat-time">{m.time}</span>
-              </div>
+              <span className="chat-username">@{m.user}</span>
               <div className="chat-text">{m.text}</div>
             </div>
           ))}
         </div>
         <div className="chat-input-area">
-          <input
-            className="chat-input"
-            placeholder="Say something..."
-            value={chatInput}
-            onChange={e => setChatInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && sendMessage()}
-          />
+          <input className="chat-input" placeholder="Send text..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} />
           <button className="chat-send" onClick={sendMessage}>→</button>
         </div>
       </div>
@@ -714,116 +359,18 @@ function ViewerScreen({ stream, onBack }) {
   );
 }
 
-function CreatorScreen({ onGoLive }) {
-  const [title, setTitle] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Travel");
-  const cats = CATEGORIES.filter(c => c !== "All");
-
-  return (
-    <div className="creator-screen screen-enter">
-      <div className="creator-preview">
-        <span>📷</span>
-        <div className="creator-controls-overlay">
-          <button className="icon-btn" title="Flip camera">🔄</button>
-          <button className="icon-btn" title="Flash">⚡</button>
-        </div>
-        <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", fontSize: 12, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>
-          CAMERA PREVIEW
-        </div>
-      </div>
-
-      <div className="creator-panel">
-        <div className="creator-panel-title">Go Live</div>
-        <div className="form-group">
-          <label className="form-label">Title</label>
-          <input className="form-input" placeholder="What's happening?" value={title} onChange={e => setTitle(e.target.value.slice(0, 60))} />
-          <div className="char-count">{title.length}/60</div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Category</label>
-          <div className="cat-grid">
-            {cats.map(c => (
-              <button key={c} className={`cat-chip ${activeCategory === c ? "active" : ""}`} onClick={() => setActiveCategory(c)}>{c}</button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ flex: 1 }} />
-        <button className="go-live-btn" onClick={onGoLive} disabled={!title.trim()} style={{ opacity: title.trim() ? 1 : 0.5 }}>
-          🔴 Go Live
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ProfileScreen() {
-  const recent = [
-    { emoji: "🇯🇵", name: "Walking through Shibuya at night", meta: "Tokyo, Japan · Walking", stat: "3,241 viewers" },
-    { emoji: "🌿", name: "Sunset hike in the Alps", meta: "Zermatt, Switzerland · Nature", stat: "1,540 viewers" },
-  ];
-
-  return (
-    <div className="profile-screen screen-enter">
-      <div className="profile-main">
-        <div className="profile-header">
-          <div className="profile-avatar">🌍</div>
-          <div>
-            <div className="profile-name">World Explorer</div>
-            <div className="profile-handle">@world_explorer</div>
-            <div className="profile-joined">Member since June 2026</div>
-          </div>
-        </div>
-
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-value">42</div>
-            <div className="stat-label">Lives Started</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">1,284</div>
-            <div className="stat-label">Lives Watched</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">38</div>
-            <div className="stat-label">Countries Explored</div>
-          </div>
-        </div>
-
-        <div className="recent-section">
-          <div className="recent-title">Recent Broadcasts</div>
-          <div className="recent-list">
-            {recent.map((item, idx) => (
-              <div className="recent-item" key={idx}>
-                <div className="recent-emoji">{item.emoji}</div>
-                <div className="recent-info">
-                  <div className="recent-name">{item.name}</div>
-                  <div className="recent-meta">{item.meta}</div>
-                </div>
-                <div className="recent-stat">{item.stat}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── MASTER ROOT APP ──────────────────────────────────────────────────────────
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState("home"); 
+  const [currentScreen, setCurrentScreen] = useState("home");
   const [selectedStream, setSelectedStream] = useState(null);
 
   useEffect(() => {
-    const styleTag = document.createElement("style");
-    styleTag.innerHTML = styles;
-    document.head.appendChild(styleTag);
-    return () => document.head.removeChild(styleTag);
+    const tag = document.createElement("style");
+    tag.innerHTML = styles;
+    document.head.appendChild(tag);
+    return () => document.head.removeChild(tag);
   }, []);
 
-  const handleStreamSelect = (stream) => {
+  const openStream = (stream) => {
     setSelectedStream(stream);
     setCurrentScreen("viewer");
   };
@@ -832,19 +379,16 @@ export default function App() {
     <div className="app">
       <nav className="sidebar">
         <div className="sidebar-logo">M</div>
-        <button className={`nav-btn ${currentScreen === 'home' ? 'active' : ''}`} onClick={() => setCurrentScreen("home")}>🏠</button>
-        <button className={`nav-btn ${currentScreen === 'map' ? 'active' : ''}`} onClick={() => setCurrentScreen("map")}>🗺️</button>
-        <button className={`nav-btn go-live ${currentScreen === 'creator' ? 'active' : ''}`} onClick={() => setCurrentScreen("creator")}>➕</button>
+        <button className={`nav-btn ${currentScreen === "home" ? "active" : ""}`} onClick={() => setCurrentScreen("home")}>🏠</button>
+        <button className={`nav-btn ${currentScreen === "map" ? "active" : ""}`} onClick={() => setCurrentScreen("map")}>🗺️</button>
+        <button className="nav-btn go-live">➕</button>
         <div className="nav-spacer" />
-        <button className={`nav-btn ${currentScreen === 'profile' ? 'active' : ''}`} onClick={() => setCurrentScreen("profile")}>👤</button>
+        <button className="nav-btn">👤</button>
       </nav>
-
       <main className="main">
-        {currentScreen === "home" && <HomeScreen onStreamClick={handleStreamSelect} onGoLive={() => setCurrentScreen("creator")} />}
-        {currentScreen === "map" && <MapScreen onStreamClick={handleStreamSelect} />}
-        {currentScreen === "creator" && <CreatorScreen onGoLive={() => setCurrentScreen("home")} />}
-        {currentScreen === "profile" && <ProfileScreen />}
-        {currentScreen === "viewer" && selectedStream && <ViewerScreen stream={selectedStream} onBack={() => setCurrentScreen("home")} />}
+        {currentScreen === "home" && <HomeScreen onStreamClick={openStream} />}
+        {currentScreen === "map" && <MapScreen onStreamClick={openStream} />}
+        {currentScreen === "viewer" && selectedStream && <ViewerScreen stream={selectedStream} onBack={() => setCurrentScreen("map")} />}
       </main>
     </div>
   );
