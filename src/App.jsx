@@ -14,6 +14,7 @@ const MOCK_STREAMS = [
 ];
 
 const CATEGORIES = ["All", "Travel", "Walking", "Nature", "Music", "Sports", "Events", "City Life"];
+const STREAM_CATEGORIES = ["Walking", "Travel", "Nature", "Music", "Sports", "Events", "City Life", "Gaming", "Food", "Talk"];
 const CHAT_MESSAGES = [
   { user: "alex_w", text: "this is incredible!" },
   { user: "sofia_m", text: "where is this place? 😍" },
@@ -26,7 +27,7 @@ const styles = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --void: #050512; --surface: #0B0B1E; --card: #12122B; --card2: #161636;
-  --border: #23234E; --violet: #6C63FF; --live-purple: #4D13D1;
+  --border: #23234E; --violet: #e00707; --live-purple: #50ba09;
   --text: #F0F0F8; --sub: #8888AA;
 }
 body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
@@ -54,7 +55,8 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 .stream-card:hover { transform: translateY(-2px); border-color: var(--violet); }
 .stream-thumb { width: 100%; height: 148px; display: flex; align-items: center; justify-content: center; font-size: 42px; position: relative; }
 .live-badge { position: absolute; top: 10px; left: 10px; background: var(--live-purple); color: white; font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
-.live-dot { width: 6px; height: 6px; background: white; border-radius: 50%; }
+.live-dot { width: 6px; height: 6px; background: white; border-radius: 50%; animation: blink 1s infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 .viewer-count { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: white; font-size: 11px; padding: 3px 8px; border-radius: 20px; }
 .stream-info { padding: 12px; }
 .stream-title { font-size: 13px; font-weight: 600; line-height: 1.4; margin-bottom: 5px; color: var(--text); }
@@ -91,6 +93,34 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 .chat-send { width: 36px; height: 36px; background: var(--live-purple); border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .screen-enter { animation: screen-in 0.2s ease-out; }
 @keyframes screen-in { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
+
+/* GO LIVE SCREEN */
+.golive-screen { flex: 1; display: flex; height: 100%; overflow: hidden; }
+.golive-preview { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
+.golive-video { width: 100%; height: 100%; object-fit: cover; }
+.golive-no-cam { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--sub); font-size: 14px; }
+.golive-no-cam-icon { font-size: 48px; }
+.golive-overlay-top { position: absolute; top: 0; left: 0; right: 0; padding: 20px 24px; background: linear-gradient(to bottom, rgba(5,5,18,0.9), transparent); display: flex; justify-content: space-between; align-items: center; }
+.golive-overlay-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 24px; background: linear-gradient(to top, rgba(5,5,18,0.9), transparent); display: flex; justify-content: center; gap: 16px; }
+.golive-ctrl-btn { width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.golive-ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+.golive-ctrl-btn.off { background: rgba(220,50,50,0.6); border-color: rgba(220,50,50,0.8); }
+.golive-panel { width: 340px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px; gap: 20px; overflow-y: auto; }
+.golive-panel-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); }
+.golive-label { font-size: 12px; color: var(--sub); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.golive-input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); outline: none; font-size: 14px; font-family: 'Inter', sans-serif; }
+.golive-input:focus { border-color: var(--violet); }
+.golive-select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); outline: none; font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; }
+.golive-start-btn { width: 100%; padding: 14px; background: var(--live-purple); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; box-shadow: 0 4px 20px rgba(77,19,209,0.4); transition: opacity 0.15s; }
+.golive-start-btn:hover { opacity: 0.9; }
+.golive-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.golive-stop-btn { width: 100%; padding: 14px; background: rgba(220,50,50,0.8); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: opacity 0.15s; }
+.golive-stop-btn:hover { opacity: 0.9; }
+.golive-live-stats { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-around; }
+.golive-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.golive-stat-num { font-size: 22px; font-weight: 700; color: var(--text); font-family: 'Space Grotesk', sans-serif; }
+.golive-stat-label { font-size: 11px; color: var(--sub); }
+.golive-live-badge { background: #CC0000; color: white; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
 `;
 
 function StreamCard({ stream, onClick }) {
@@ -178,20 +208,15 @@ function MapScreen({ onStreamClick }) {
       if (!proj.current || !pathFn.current || !land.current) return;
       proj.current.rotate(s.rotation);
       ctx.clearRect(0, 0, W, H);
-
       ctx.beginPath(); pathFn.current({ type: "Sphere" });
       ctx.fillStyle = "#080820"; ctx.fill();
-
       ctx.beginPath(); pathFn.current(d3.geoGraticule()());
       ctx.strokeStyle = "#16163A"; ctx.lineWidth = 0.5; ctx.stroke();
-
       ctx.beginPath(); pathFn.current(land.current);
       ctx.fillStyle = "#1C1C4A"; ctx.fill();
       ctx.strokeStyle = "#2D2D6E"; ctx.lineWidth = 0.6; ctx.stroke();
-
       ctx.beginPath(); pathFn.current({ type: "Sphere" });
       ctx.strokeStyle = "#23234E"; ctx.lineWidth = 1.5; ctx.stroke();
-
       MOCK_STREAMS.forEach(stream => {
         const c = proj.current([stream.lon, stream.lat]);
         if (!c) return;
@@ -264,9 +289,7 @@ function MapScreen({ onStreamClick }) {
     canvas.addEventListener("mouseup", onUp);
     canvas.addEventListener("mouseleave", onLeave);
     canvas.addEventListener("click", onClick);
-
     init();
-
     return () => {
       cancelAnimationFrame(animId.current);
       canvas.removeEventListener("mousemove", onMove);
@@ -284,7 +307,7 @@ function MapScreen({ onStreamClick }) {
         <div className="globe-tooltip" style={{ left: tooltip.x + 20, top: tooltip.y - 10 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#F0F0F8", marginBottom: 3 }}>{tooltip.s.emoji} {tooltip.s.title}</div>
           <div style={{ fontSize: 12, color: "#8888AA" }}>📍 {tooltip.s.location}</div>
-          <div style={{ fontSize: 12, color: "#6C63FF", marginTop: 3 }}>👁 {tooltip.s.viewers.toLocaleString()} viewers</div>
+          <div style={{ fontSize: 12, color: "#e45508", marginTop: 3 }}>👁 {tooltip.s.viewers.toLocaleString()} viewers</div>
         </div>
       )}
       <div className="globe-pills">
@@ -296,6 +319,184 @@ function MapScreen({ onStreamClick }) {
         ))}
       </div>
       <div className="globe-stream-count"><span>{MOCK_STREAMS.length}</span> streams active</div>
+    </div>
+  );
+}
+
+// ─── GO LIVE SCREEN ───────────────────────────────────────────────────────────
+function GoLiveScreen({ onBack }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const intervalRef = useRef(null);
+  const [camOn, setCamOn] = useState(false);
+  const [micOn, setMicOn] = useState(true);
+  const [isLive, setIsLive] = useState(false);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("Travel");
+  const [viewers, setViewers] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [camError, setCamError] = useState(false);
+
+  useEffect(() => {
+    startCamera();
+    return () => stopCamera();
+  }, []);
+
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCamOn(true);
+      setCamError(false);
+    } catch {
+      setCamError(true);
+    }
+  }
+
+  function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  }
+
+  function toggleCam() {
+    if (!streamRef.current) return;
+    const videoTrack = streamRef.current.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setCamOn(videoTrack.enabled);
+    }
+  }
+
+  function toggleMic() {
+    if (!streamRef.current) return;
+    const audioTrack = streamRef.current.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setMicOn(audioTrack.enabled);
+    }
+  }
+
+  function startLive() {
+    if (!title.trim()) return;
+    setIsLive(true);
+    setViewers(1);
+    setDuration(0);
+    intervalRef.current = setInterval(() => {
+      setDuration(d => d + 1);
+      setViewers(v => {
+        const delta = Math.floor(Math.random() * 5) - 1;
+        return Math.max(1, v + delta);
+      });
+    }, 1000);
+  }
+
+  function stopLive() {
+    setIsLive(false);
+    clearInterval(intervalRef.current);
+    setViewers(0);
+    setDuration(0);
+  }
+
+  function formatDuration(s) {
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  }
+
+  return (
+    <div className="golive-screen screen-enter">
+      <div className="golive-preview">
+        {!camError ? (
+          <video ref={videoRef} className="golive-video" autoPlay muted playsInline />
+        ) : (
+          <div className="golive-no-cam">
+            <div className="golive-no-cam-icon">📷</div>
+            <div>კამერა მიუწვდომელია</div>
+            <div style={{ fontSize: 12 }}>შეამოწმე ბრაუზერის ნებართვები</div>
+          </div>
+        )}
+
+        <div className="golive-overlay-top">
+          <button className="viewer-back" onClick={() => { stopCamera(); stopLive(); onBack(); }}>←</button>
+          {isLive && (
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div className="golive-live-badge"><div className="live-dot" />LIVE</div>
+              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>
+                👁 {viewers}
+              </div>
+              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>
+                ⏱ {formatDuration(duration)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="golive-overlay-bottom">
+          <button className={`golive-ctrl-btn ${!micOn ? "off" : ""}`} onClick={toggleMic}>
+            {micOn ? "🎙️" : "🔇"}
+          </button>
+          <button className={`golive-ctrl-btn ${!camOn ? "off" : ""}`} onClick={toggleCam}>
+            {camOn ? "📹" : "🚫"}
+          </button>
+        </div>
+      </div>
+
+      <div className="golive-panel">
+        <div className="golive-panel-title">🔴 Go Live</div>
+
+        {!isLive ? (
+          <>
+            <div>
+              <div className="golive-label">სტრიმის სათაური</div>
+              <input
+                className="golive-input"
+                placeholder="რას აჩვენებ დღეს?"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <div className="golive-label">კატეგორია</div>
+              <select className="golive-select" value={category} onChange={e => setCategory(e.target.value)}>
+                {STREAM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ marginTop: "auto" }}>
+              <button className="golive-start-btn" onClick={startLive} disabled={!title.trim()}>
+                🔴 სტრიმის დაწყება
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="golive-live-stats">
+              <div className="golive-stat">
+                <div className="golive-stat-num">{viewers}</div>
+                <div className="golive-stat-label">მაყურებელი</div>
+              </div>
+              <div className="golive-stat">
+                <div className="golive-stat-num">{formatDuration(duration)}</div>
+                <div className="golive-stat-label">ხანგრძლივობა</div>
+              </div>
+            </div>
+            <div style={{ background: "var(--card)", borderRadius: 12, padding: 14, border: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 6 }}>სტრიმის სათაური</div>
+              <div style={{ fontSize: 14, color: "var(--text)", fontWeight: 600 }}>{title}</div>
+              <div style={{ fontSize: 12, color: "var(--violet)", marginTop: 4 }}>{category}</div>
+            </div>
+            <div style={{ marginTop: "auto" }}>
+              <button className="golive-stop-btn" onClick={stopLive}>
+                ⏹ სტრიმის შეჩერება
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -381,13 +582,14 @@ export default function App() {
         <div className="sidebar-logo">M</div>
         <button className={`nav-btn ${currentScreen === "home" ? "active" : ""}`} onClick={() => setCurrentScreen("home")}>🏠</button>
         <button className={`nav-btn ${currentScreen === "map" ? "active" : ""}`} onClick={() => setCurrentScreen("map")}>🗺️</button>
-        <button className="nav-btn go-live">➕</button>
+        <button className="nav-btn go-live" onClick={() => setCurrentScreen("golive")}>➕</button>
         <div className="nav-spacer" />
         <button className="nav-btn">👤</button>
       </nav>
       <main className="main">
         {currentScreen === "home" && <HomeScreen onStreamClick={openStream} />}
         {currentScreen === "map" && <MapScreen onStreamClick={openStream} />}
+        {currentScreen === "golive" && <GoLiveScreen onBack={() => setCurrentScreen("home")} />}
         {currentScreen === "viewer" && selectedStream && <ViewerScreen stream={selectedStream} onBack={() => setCurrentScreen("map")} />}
       </main>
     </div>
