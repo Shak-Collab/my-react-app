@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 import * as topojson from "topojson-client";
+import { auth } from "./firebase";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 const MOCK_STREAMS = [
   { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
@@ -559,14 +561,17 @@ function AuthModal({ onClose }) {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
-  const handleSubmit = () => {
-    // Firebase auth integration point:
-    // import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-    // const auth = getAuth();
-    // if (tab === "register") createUserWithEmailAndPassword(auth, email, password)
-    // else signInWithEmailAndPassword(auth, email, password)
-    alert(tab === "register" ? `Account created for ${email}` : `Signed in as ${email}`);
-    onClose();
+  const handleSubmit = async () => {
+    try {
+      if (tab === "register") {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      onClose();
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (
