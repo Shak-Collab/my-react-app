@@ -4,6 +4,7 @@ import * as topojson from "topojson-client";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
+import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
 
 const MOCK_STREAMS = [
   { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
@@ -497,7 +498,11 @@ function GoLiveScreen({ onBack }) {
   );
 }
 
-function ViewerScreen({ stream, onBack }) {
+function ViewerScreen({ streams, onBack }) {
+  const { id } = useParams();
+  const stream = streams.find(s => String(s.id) === id);
+
+  if (!stream) return <div style={{ color: "var(--text)", padding: 40 }}>Stream not found.</div>;
   const [hearts, setHearts] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState([]);
@@ -628,10 +633,7 @@ function AuthModal({ onClose }) {
     </div>
   );
 }
-
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState("home");
-  const [selectedStream, setSelectedStream] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
@@ -641,37 +643,30 @@ export default function App() {
     return () => document.head.removeChild(tag);
   }, []);
 
-  const openStream = (stream) => {
-    setSelectedStream(stream);
-    setCurrentScreen("viewer");
-  };
-
   return (
-    <div className="app">
+    <BrowserRouter>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-      <nav className="sidebar">
-        <div className="sidebar-logo">M</div>
-        <button className={`nav-btn ${currentScreen === "home" ? "active" : ""}`} onClick={() => setCurrentScreen("home")}>
-          🏠<span className="nav-btn-label">Home</span>
-        </button>
-        <button className={`nav-btn ${currentScreen === "map" ? "active" : ""}`} onClick={() => setCurrentScreen("map")}>
-          🗺️<span className="nav-btn-label">Map</span>
-        </button>
-        <button className="nav-btn go-live" onClick={() => setCurrentScreen("golive")}>
-          <div className="go-live-dot" />
-          <span className="nav-btn-label" style={{ color: "var(--live-red)" }}>Go live</span>
-        </button>
-        <div className="nav-spacer" />
-        <button className="nav-btn" onClick={() => setShowAuth(true)}>
-          👤<span className="nav-btn-label">Account</span>
-        </button>
-      </nav>
-      <main className="main">
-        {currentScreen === "home" && <HomeScreen onStreamClick={openStream} />}
-        {currentScreen === "map" && <MapScreen onStreamClick={openStream} />}
-        {currentScreen === "golive" && <GoLiveScreen onBack={() => setCurrentScreen("home")} />}
-        {currentScreen === "viewer" && selectedStream && <ViewerScreen stream={selectedStream} onBack={() => setCurrentScreen("map")} />}
-      </main>
-    </div>
+      <div className="app">
+        <nav className="sidebar">
+          <div className="sidebar-logo">M</div>
+          <button className="nav-btn" onClick={() => window.location.href = "/"}>🏠<span className="nav-btn-label">Home</span></button>
+          <button className="nav-btn" onClick={() => window.location.href = "/map"}>🗺️<span className="nav-btn-label">Map</span></button>
+          <button className="nav-btn go-live" onClick={() => window.location.href = "/golive"}>
+            <div className="go-live-dot" />
+            <span className="nav-btn-label" style={{ color: "var(--live-red)" }}>Go live</span>
+          </button>
+          <div className="nav-spacer" />
+          <button className="nav-btn" onClick={() => setShowAuth(true)}>👤<span className="nav-btn-label">Account</span></button>
+        </nav>
+        <main className="main">
+          <Routes>
+            <Route path="/" element={<HomeScreen onStreamClick={(stream) => window.location.href = `/stream/${stream.id}`} />} />
+            <Route path="/map" element={<MapScreen onStreamClick={(stream) => window.location.href = `/stream/${stream.id}`} />} />
+            <Route path="/golive" element={<GoLiveScreen onBack={() => window.location.href = "/"} />} />
+            <Route path="/stream/:id" element={<ViewerScreen streams={MOCK_STREAMS} onBack={() => window.location.href = "/map"} />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
