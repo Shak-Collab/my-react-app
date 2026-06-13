@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 import * as topojson from "topojson-client";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
 
 const MOCK_STREAMS = [
   { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
@@ -499,7 +500,15 @@ function GoLiveScreen({ onBack }) {
 function ViewerScreen({ stream, onBack }) {
   const [hearts, setHearts] = useState([]);
   const [chatInput, setChatInput] = useState("");
-  const [messages, setMessages] = useState(CHAT_MESSAGES);
+  const [messages, setMessages] = useState([]);
+
+useEffect(() => {
+  const q = query(collection(db, "chats", String(stream.id), "messages"), orderBy("createdAt"));
+  const unsub = onSnapshot(q, snap => {
+    setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+  return () => unsub();
+}, [stream.id]);
 
   const addHeart = () => {
     const id = Date.now();
@@ -507,11 +516,15 @@ function ViewerScreen({ stream, onBack }) {
     setTimeout(() => setHearts(h => h.filter(i => i.id !== id)), 1200);
   };
 
-  const sendMessage = () => {
-    if (!chatInput.trim()) return;
-    setMessages(m => [...m, { user: "you", text: chatInput }]);
-    setChatInput("");
-  };
+  const sendMessage = async () => {
+  if (!chatInput.trim()) return;
+  await addDoc(collection(db, "chats", String(stream.id), "messages"), {
+    user: auth.currentUser?.email || "anonymous",
+    text: chatInput,
+    createdAt: serverTimestamp()
+  });
+  setChatInput("");
+};
 
   return (
     <div className="viewer-screen screen-enter">
