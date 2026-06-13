@@ -26,51 +26,64 @@ const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --void: #050512; --surface: #0B0B1E; --card: #12122B; --card2: #161636;
-  --border: #23234E; --violet: #e00707; --live-purple: #50ba09;
-  --text: #F0F0F8; --sub: #8888AA;
+  --void: #F5F5F7;
+  --surface: #FFFFFF;
+  --card: #F0F0F5;
+  --card2: #EAEAF0;
+  --border: #DCDCE8;
+  --violet: #E00707;
+  --live-red: #CC0000;
+  --text: #111122;
+  --sub: #666688;
 }
 body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 .app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-.sidebar { width: 64px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 8px; flex-shrink: 0; z-index: 10; }
-.sidebar-logo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--violet); margin-bottom: 24px; }
-.nav-btn { width: 44px; height: 44px; border-radius: 12px; border: none; background: transparent; color: var(--sub); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
+.sidebar { width: 72px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 4px; flex-shrink: 0; z-index: 10; }
+.sidebar-logo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--violet); margin-bottom: 20px; }
+.nav-btn { width: 52px; border-radius: 12px; border: none; background: transparent; color: var(--sub); font-size: 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.15s ease; padding: 8px 4px 6px; gap: 3px; }
 .nav-btn:hover { background: var(--card2); color: var(--text); }
-.nav-btn.active { background: rgba(108,99,255,0.15); color: var(--violet); }
-.nav-btn.go-live { background: var(--live-purple); color: white; margin-top: 8px; font-size: 22px; box-shadow: 0 4px 20px rgba(77,19,209,0.4); }
+.nav-btn.active { background: rgba(220,0,0,0.08); color: var(--violet); }
+.nav-btn-label { font-size: 9px; font-weight: 600; letter-spacing: 0.03em; color: inherit; line-height: 1; }
+.nav-btn.go-live { color: var(--live-red); margin-top: 8px; }
+.nav-btn.go-live:hover { background: rgba(204,0,0,0.08); }
+.go-live-dot { width: 22px; height: 22px; background: var(--live-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(204,0,0,0.35); }
 .nav-spacer { flex: 1; }
 .main { flex: 1; display: flex; overflow: hidden; background: var(--void); }
 .home { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; }
 .home-header { padding: 20px 28px 0; display: flex; align-items: center; justify-content: space-between; }
-.home-title { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; }
+.home-title { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); }
 .home-title span { color: var(--violet); }
 .categories { display: flex; gap: 8px; padding: 16px 28px 0; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .categories::-webkit-scrollbar { display: none; }
-.cat-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--sub); font-size: 13px; cursor: pointer; white-space: nowrap; }
-.cat-pill.active { background: var(--live-purple); border-color: var(--live-purple); color: white; }
+.cat-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--sub); font-size: 13px; cursor: pointer; white-space: nowrap; }
+.cat-pill.active { background: var(--live-red); border-color: var(--live-red); color: white; }
 .stream-scroll { flex: 1; overflow-y: auto; padding: 16px 28px 28px; }
 .section-label { font-size: 11px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
 .stream-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stream-card { border-radius: 16px; overflow: hidden; background: var(--card2); cursor: pointer; border: 1px solid var(--border); position: relative; transition: transform 0.2s; }
-.stream-card:hover { transform: translateY(-2px); border-color: var(--violet); }
+.stream-card { border-radius: 16px; overflow: hidden; background: var(--surface); cursor: pointer; border: 1px solid var(--border); position: relative; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.stream-card:hover { transform: translateY(-2px); border-color: var(--violet); box-shadow: 0 4px 16px rgba(220,0,0,0.1); }
 .stream-thumb { width: 100%; height: 148px; display: flex; align-items: center; justify-content: center; font-size: 42px; position: relative; }
-.live-badge { position: absolute; top: 10px; left: 10px; background: var(--live-purple); color: white; font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+.live-badge { position: absolute; top: 10px; left: 10px; background: var(--live-red); color: white; font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
 .live-dot { width: 6px; height: 6px; background: white; border-radius: 50%; animation: blink 1s infinite; }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-.viewer-count { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: white; font-size: 11px; padding: 3px 8px; border-radius: 20px; }
-.stream-info { padding: 12px; }
+.viewer-count { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.55); color: white; font-size: 11px; padding: 3px 8px; border-radius: 20px; }
+.stream-info { padding: 12px; background: var(--surface); }
 .stream-title { font-size: 13px; font-weight: 600; line-height: 1.4; margin-bottom: 5px; color: var(--text); }
 .stream-location { font-size: 12px; color: var(--sub); }
+
+/* MAP */
 .map-screen { flex: 1; position: relative; overflow: hidden; background: var(--void); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-.globe-canvas { display: block; border-radius: 50%; }
-.globe-tooltip { position: absolute; pointer-events: none; z-index: 20; background: rgba(12,12,35,0.97); border: 1px solid #6C63FF; border-radius: 12px; padding: 10px 14px; min-width: 190px; }
+.globe-canvas { display: block; border-radius: 50%; box-shadow: 0 8px 40px rgba(0,0,0,0.12); }
+.globe-tooltip { position: absolute; pointer-events: none; z-index: 20; background: rgba(255,255,255,0.97); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; min-width: 190px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
 .globe-pills { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; padding: 10px 20px 0; max-width: 700px; }
-.globe-pill { background: rgba(18,18,43,0.9); border-radius: 20px; padding: 5px 12px; color: #F0F0F8; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; border: 1px solid #23234E; }
-.globe-pill:hover { background: rgba(108,99,255,0.2); }
-.globe-stream-count { background: rgba(18,18,43,0.9); border: 1px solid var(--border); border-radius: 10px; padding: 7px 14px; font-size: 13px; color: var(--sub); position: absolute; top: 18px; right: 22px; }
+.globe-pill { background: var(--surface); border-radius: 20px; padding: 5px 12px; color: var(--text); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; border: 1px solid var(--border); }
+.globe-pill:hover { background: var(--card2); }
+.globe-stream-count { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 14px; font-size: 13px; color: var(--sub); position: absolute; top: 18px; right: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .globe-stream-count span { color: var(--violet); font-weight: 700; }
+
+/* VIEWER */
 .viewer-screen { flex: 1; background: #000; display: flex; position: relative; overflow: hidden; height: 100%; }
-.viewer-video { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 80px; background: radial-gradient(ellipse at center, #12122b 0%, #050512 100%); position: relative; }
+.viewer-video { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 80px; background: radial-gradient(ellipse at center, #1a1a2e 0%, #050512 100%); position: relative; }
 .viewer-video-label { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 13px; color: rgba(255,255,255,0.25); letter-spacing: 0.05em; }
 .viewer-top { position: absolute; top: 0; left: 0; right: 320px; padding: 20px 24px; background: linear-gradient(to bottom, rgba(5,5,18,0.8) 0%, transparent 100%); display: flex; align-items: flex-start; justify-content: space-between; }
 .viewer-back { width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -81,24 +94,22 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 .floating-hearts { position: absolute; bottom: 80px; right: 340px; pointer-events: none; }
 .heart { position: absolute; font-size: 22px; animation: float-heart 1.2s ease-out forwards; }
 @keyframes float-heart { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-120px) scale(0.5); } }
-.chat-panel { width: 320px; background: rgba(11,11,30,0.95); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+.chat-panel { width: 320px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
 .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .chat-title { font-size: 14px; font-weight: 600; color: var(--text); }
 .chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
 .chat-msg { display: flex; flex-direction: column; }
 .chat-username { font-size: 11px; font-weight: 600; color: var(--violet); margin-bottom: 2px; }
-.chat-text { font-size: 13px; color: rgba(240,240,248,0.85); }
+.chat-text { font-size: 13px; color: var(--text); }
 .chat-input-area { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
 .chat-input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--text); outline: none; font-size: 13px; }
-.chat-send { width: 36px; height: 36px; background: var(--live-purple); border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.screen-enter { animation: screen-in 0.2s ease-out; }
-@keyframes screen-in { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
+.chat-send { width: 36px; height: 36px; background: var(--live-red); border: none; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-/* GO LIVE SCREEN */
+/* GO LIVE */
 .golive-screen { flex: 1; display: flex; height: 100%; overflow: hidden; }
 .golive-preview { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
 .golive-video { width: 100%; height: 100%; object-fit: cover; }
-.golive-no-cam { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--sub); font-size: 14px; }
+.golive-no-cam { display: flex; flex-direction: column; align-items: center; gap: 12px; color: rgba(255,255,255,0.5); font-size: 14px; }
 .golive-no-cam-icon { font-size: 48px; }
 .golive-overlay-top { position: absolute; top: 0; left: 0; right: 0; padding: 20px 24px; background: linear-gradient(to bottom, rgba(5,5,18,0.9), transparent); display: flex; justify-content: space-between; align-items: center; }
 .golive-overlay-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 24px; background: linear-gradient(to top, rgba(5,5,18,0.9), transparent); display: flex; justify-content: center; gap: 16px; }
@@ -111,22 +122,42 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 .golive-input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); outline: none; font-size: 14px; font-family: 'Inter', sans-serif; }
 .golive-input:focus { border-color: var(--violet); }
 .golive-select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); outline: none; font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; }
-.golive-start-btn { width: 100%; padding: 14px; background: var(--live-purple); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; box-shadow: 0 4px 20px rgba(77,19,209,0.4); transition: opacity 0.15s; }
+.golive-start-btn { width: 100%; padding: 14px; background: var(--live-red); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; box-shadow: 0 4px 20px rgba(204,0,0,0.3); transition: opacity 0.15s; }
 .golive-start-btn:hover { opacity: 0.9; }
 .golive-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.golive-stop-btn { width: 100%; padding: 14px; background: rgba(220,50,50,0.8); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: opacity 0.15s; }
+.golive-stop-btn { width: 100%; padding: 14px; background: rgba(220,50,50,0.9); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: opacity 0.15s; }
 .golive-stop-btn:hover { opacity: 0.9; }
 .golive-live-stats { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-around; }
 .golive-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .golive-stat-num { font-size: 22px; font-weight: 700; color: var(--text); font-family: 'Space Grotesk', sans-serif; }
 .golive-stat-label { font-size: 11px; color: var(--sub); }
 .golive-live-badge { background: #CC0000; color: white; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+.screen-enter { animation: screen-in 0.2s ease-out; }
+@keyframes screen-in { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
+
+/* REGISTRATION */
+.auth-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; display: flex; align-items: center; justify-content: center; animation: fade-in 0.2s ease; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.auth-modal { background: var(--surface); border-radius: 20px; padding: 36px 32px; width: 380px; max-width: 90vw; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
+.auth-title { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); }
+.auth-subtitle { font-size: 13px; color: var(--sub); margin-top: -10px; }
+.auth-tabs { display: flex; background: var(--card); border-radius: 10px; padding: 3px; gap: 3px; }
+.auth-tab { flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--sub); transition: all 0.15s; }
+.auth-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.auth-field { display: flex; flex-direction: column; gap: 6px; }
+.auth-field label { font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.06em; }
+.auth-field input { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); outline: none; font-size: 14px; font-family: 'Inter', sans-serif; width: 100%; }
+.auth-field input:focus { border-color: var(--violet); }
+.auth-submit { width: 100%; padding: 13px; background: var(--live-red); border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Space Grotesk', sans-serif; box-shadow: 0 4px 20px rgba(204,0,0,0.25); transition: opacity 0.15s; }
+.auth-submit:hover { opacity: 0.9; }
+.auth-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; background: var(--card); border: 1px solid var(--border); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 16px; }
+.auth-modal-wrap { position: relative; }
 `;
 
 function StreamCard({ stream, onClick }) {
   return (
     <div className="stream-card" onClick={() => onClick(stream)}>
-      <div className="stream-thumb" style={{ background: `radial-gradient(ellipse at center, ${stream.color}22, #050512)` }}>
+      <div className="stream-thumb" style={{ background: `radial-gradient(ellipse at center, ${stream.color}18, #F0F0F5)` }}>
         <span>{stream.emoji}</span>
         <div className="live-badge"><div className="live-dot" />LIVE</div>
         <div className="viewer-count">👁 {stream.viewers.toLocaleString()}</div>
@@ -144,7 +175,7 @@ function HomeScreen({ onStreamClick }) {
   const filtered = activeCategory === "All" ? MOCK_STREAMS : MOCK_STREAMS.filter(s => s.category === activeCategory);
   return (
     <div className="home screen-enter">
-      <div className="home-header"><div className="home-title">🌍 <span>Momentra</span></div></div>
+      <div className="home-header"><div className="home-title"><span style={{filter: "grayscale(1) sepia(1) saturate(5) hue-rotate(300deg)"}}>🌐</span> <span>Momentra</span></div></div>
       <div className="categories">
         {CATEGORIES.map(c => (
           <button key={c} className={`cat-pill ${activeCategory === c ? "active" : ""}`} onClick={() => setActiveCategory(c)}>{c}</button>
@@ -209,14 +240,14 @@ function MapScreen({ onStreamClick }) {
       proj.current.rotate(s.rotation);
       ctx.clearRect(0, 0, W, H);
       ctx.beginPath(); pathFn.current({ type: "Sphere" });
-      ctx.fillStyle = "#080820"; ctx.fill();
+      ctx.fillStyle = "#D8E8F5"; ctx.fill();
       ctx.beginPath(); pathFn.current(d3.geoGraticule()());
-      ctx.strokeStyle = "#16163A"; ctx.lineWidth = 0.5; ctx.stroke();
+      ctx.strokeStyle = "#C0D4E8"; ctx.lineWidth = 0.5; ctx.stroke();
       ctx.beginPath(); pathFn.current(land.current);
-      ctx.fillStyle = "#1C1C4A"; ctx.fill();
-      ctx.strokeStyle = "#2D2D6E"; ctx.lineWidth = 0.6; ctx.stroke();
+      ctx.fillStyle = "#9BB8A0"; ctx.fill();
+      ctx.strokeStyle = "#7AA085"; ctx.lineWidth = 0.6; ctx.stroke();
       ctx.beginPath(); pathFn.current({ type: "Sphere" });
-      ctx.strokeStyle = "#23234E"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = "#AABCCC"; ctx.lineWidth = 1.5; ctx.stroke();
       MOCK_STREAMS.forEach(stream => {
         const c = proj.current([stream.lon, stream.lat]);
         if (!c) return;
@@ -233,7 +264,7 @@ function MapScreen({ onStreamClick }) {
         ctx.beginPath();
         ctx.arc(px, py, size, 0, Math.PI * 2);
         ctx.fillStyle = stream.color; ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1.5; ctx.stroke();
         ctx.font = `${isHov ? 16 : 13}px serif`;
         ctx.textAlign = "center";
         ctx.fillText(stream.emoji, px, py - size - 5);
@@ -305,9 +336,9 @@ function MapScreen({ onStreamClick }) {
       <canvas ref={canvasRef} width={500} height={500} className="globe-canvas" />
       {tooltip && (
         <div className="globe-tooltip" style={{ left: tooltip.x + 20, top: tooltip.y - 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#F0F0F8", marginBottom: 3 }}>{tooltip.s.emoji} {tooltip.s.title}</div>
-          <div style={{ fontSize: 12, color: "#8888AA" }}>📍 {tooltip.s.location}</div>
-          <div style={{ fontSize: 12, color: "#e45508", marginTop: 3 }}>👁 {tooltip.s.viewers.toLocaleString()} viewers</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>{tooltip.s.emoji} {tooltip.s.title}</div>
+          <div style={{ fontSize: 12, color: "var(--sub)" }}>📍 {tooltip.s.location}</div>
+          <div style={{ fontSize: 12, color: "var(--violet)", marginTop: 3 }}>👁 {tooltip.s.viewers.toLocaleString()} viewers</div>
         </div>
       )}
       <div className="globe-pills">
@@ -323,7 +354,6 @@ function MapScreen({ onStreamClick }) {
   );
 }
 
-// ─── GO LIVE SCREEN ───────────────────────────────────────────────────────────
 function GoLiveScreen({ onBack }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -346,9 +376,7 @@ function GoLiveScreen({ onBack }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = stream;
       setCamOn(true);
       setCamError(false);
     } catch {
@@ -366,46 +394,32 @@ function GoLiveScreen({ onBack }) {
   function toggleCam() {
     if (!streamRef.current) return;
     const videoTrack = streamRef.current.getVideoTracks()[0];
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      setCamOn(videoTrack.enabled);
-    }
+    if (videoTrack) { videoTrack.enabled = !videoTrack.enabled; setCamOn(videoTrack.enabled); }
   }
 
   function toggleMic() {
     if (!streamRef.current) return;
     const audioTrack = streamRef.current.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      setMicOn(audioTrack.enabled);
-    }
+    if (audioTrack) { audioTrack.enabled = !audioTrack.enabled; setMicOn(audioTrack.enabled); }
   }
 
   function startLive() {
     if (!title.trim()) return;
-    setIsLive(true);
-    setViewers(1);
-    setDuration(0);
+    setIsLive(true); setViewers(1); setDuration(0);
     intervalRef.current = setInterval(() => {
       setDuration(d => d + 1);
-      setViewers(v => {
-        const delta = Math.floor(Math.random() * 5) - 1;
-        return Math.max(1, v + delta);
-      });
+      setViewers(v => Math.max(1, v + Math.floor(Math.random() * 5) - 1));
     }, 1000);
   }
 
   function stopLive() {
     setIsLive(false);
     clearInterval(intervalRef.current);
-    setViewers(0);
-    setDuration(0);
+    setViewers(0); setDuration(0);
   }
 
   function formatDuration(s) {
-    const m = Math.floor(s / 60).toString().padStart(2, "0");
-    const sec = (s % 60).toString().padStart(2, "0");
-    return `${m}:${sec}`;
+    return `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
   }
 
   return (
@@ -416,60 +430,41 @@ function GoLiveScreen({ onBack }) {
         ) : (
           <div className="golive-no-cam">
             <div className="golive-no-cam-icon">📷</div>
-            <div>კამერა მიუწვდომელია</div>
-            <div style={{ fontSize: 12 }}>შეამოწმე ბრაუზერის ნებართვები</div>
+            <div>Camera unavailable</div>
+            <div style={{ fontSize: 12 }}>Check your browser permissions</div>
           </div>
         )}
-
         <div className="golive-overlay-top">
           <button className="viewer-back" onClick={() => { stopCamera(); stopLive(); onBack(); }}>←</button>
           {isLive && (
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <div className="golive-live-badge"><div className="live-dot" />LIVE</div>
-              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>
-                👁 {viewers}
-              </div>
-              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>
-                ⏱ {formatDuration(duration)}
-              </div>
+              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>👁 {viewers}</div>
+              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>⏱ {formatDuration(duration)}</div>
             </div>
           )}
         </div>
-
         <div className="golive-overlay-bottom">
-          <button className={`golive-ctrl-btn ${!micOn ? "off" : ""}`} onClick={toggleMic}>
-            {micOn ? "🎙️" : "🔇"}
-          </button>
-          <button className={`golive-ctrl-btn ${!camOn ? "off" : ""}`} onClick={toggleCam}>
-            {camOn ? "📹" : "🚫"}
-          </button>
+          <button className={`golive-ctrl-btn ${!micOn ? "off" : ""}`} onClick={toggleMic}>{micOn ? "🎙️" : "🔇"}</button>
+          <button className={`golive-ctrl-btn ${!camOn ? "off" : ""}`} onClick={toggleCam}>{camOn ? "📹" : "🚫"}</button>
         </div>
       </div>
-
       <div className="golive-panel">
         <div className="golive-panel-title">🔴 Go Live</div>
-
         {!isLive ? (
           <>
             <div>
-              <div className="golive-label">სტრიმის სათაური</div>
-              <input
-                className="golive-input"
-                placeholder="რას აჩვენებ დღეს?"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-              />
+              <div className="golive-label">Stream Title</div>
+              <input className="golive-input" placeholder="What are you showing today?" value={title} onChange={e => setTitle(e.target.value)} />
             </div>
             <div>
-              <div className="golive-label">კატეგორია</div>
+              <div className="golive-label">Category</div>
               <select className="golive-select" value={category} onChange={e => setCategory(e.target.value)}>
                 {STREAM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div style={{ marginTop: "auto" }}>
-              <button className="golive-start-btn" onClick={startLive} disabled={!title.trim()}>
-                🔴 სტრიმის დაწყება
-              </button>
+              <button className="golive-start-btn" onClick={startLive} disabled={!title.trim()}>🔴 Start Stream</button>
             </div>
           </>
         ) : (
@@ -477,22 +472,20 @@ function GoLiveScreen({ onBack }) {
             <div className="golive-live-stats">
               <div className="golive-stat">
                 <div className="golive-stat-num">{viewers}</div>
-                <div className="golive-stat-label">მაყურებელი</div>
+                <div className="golive-stat-label">Viewers</div>
               </div>
               <div className="golive-stat">
                 <div className="golive-stat-num">{formatDuration(duration)}</div>
-                <div className="golive-stat-label">ხანგრძლივობა</div>
+                <div className="golive-stat-label">Duration</div>
               </div>
             </div>
             <div style={{ background: "var(--card)", borderRadius: 12, padding: 14, border: "1px solid var(--border)" }}>
-              <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 6 }}>სტრიმის სათაური</div>
+              <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 6 }}>Stream Title</div>
               <div style={{ fontSize: 14, color: "var(--text)", fontWeight: 600 }}>{title}</div>
               <div style={{ fontSize: 12, color: "var(--violet)", marginTop: 4 }}>{category}</div>
             </div>
             <div style={{ marginTop: "auto" }}>
-              <button className="golive-stop-btn" onClick={stopLive}>
-                ⏹ სტრიმის შეჩერება
-              </button>
+              <button className="golive-stop-btn" onClick={stopLive}>⏹ End Stream</button>
             </div>
           </>
         )}
@@ -527,7 +520,7 @@ function ViewerScreen({ stream, onBack }) {
           <button className="viewer-back" onClick={onBack}>←</button>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div className="viewer-title">{stream.title}</div>
-            <div style={{ color: "var(--sub)", fontSize: 13 }}>📍 {stream.location}</div>
+            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>📍 {stream.location}</div>
           </div>
           <div className="viewer-viewers">👁 {stream.viewers.toLocaleString()}</div>
         </div>
@@ -540,7 +533,7 @@ function ViewerScreen({ stream, onBack }) {
       </div>
       <div className="chat-panel">
         <div className="chat-header">
-          <div className="chat-title">💬 Chat Session</div>
+          <div className="chat-title">💬 Chat</div>
           <div style={{ fontSize: 12, color: "var(--sub)" }}>{stream.country}</div>
         </div>
         <div className="chat-messages">
@@ -552,9 +545,67 @@ function ViewerScreen({ stream, onBack }) {
           ))}
         </div>
         <div className="chat-input-area">
-          <input className="chat-input" placeholder="Send text..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} />
+          <input className="chat-input" placeholder="Send a message..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} />
           <button className="chat-send" onClick={sendMessage}>→</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthModal({ onClose }) {
+  const [tab, setTab] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+
+  const handleSubmit = () => {
+    // Firebase auth integration point:
+    // import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+    // const auth = getAuth();
+    // if (tab === "register") createUserWithEmailAndPassword(auth, email, password)
+    // else signInWithEmailAndPassword(auth, email, password)
+    alert(tab === "register" ? `Account created for ${email}` : `Signed in as ${email}`);
+    onClose();
+  };
+
+  return (
+    <div className="auth-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="auth-modal-wrap" style={{ position: "relative" }}>
+        <div className="auth-modal">
+          <div>
+            <div className="auth-title"><span style={{filter: "grayscale(1) sepia(1) saturate(5) hue-rotate(300deg)"}}>🌐</span> Momentra</div>
+            <div className="auth-subtitle">{tab === "login" ? "Welcome back — sign in to continue." : "Create your account to go live."}</div>
+          </div>
+          <div className="auth-tabs">
+            <button className={`auth-tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>Sign In</button>
+            <button className={`auth-tab ${tab === "register" ? "active" : ""}`} onClick={() => setTab("register")}>Register</button>
+          </div>
+          {tab === "register" && (
+            <div className="auth-field">
+              <label>Full Name</label>
+              <input placeholder="Your name" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+          )}
+          <div className="auth-field">
+            <label>Email</label>
+            <input type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="auth-field">
+            <label>Password</label>
+            <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          </div>
+          <button className="auth-submit" onClick={handleSubmit}>
+            {tab === "login" ? "Sign In" : "Create Account"}
+          </button>
+          <div style={{ fontSize: 12, color: "var(--sub)", textAlign: "center" }}>
+            {tab === "login" ? "Don't have an account? " : "Already have an account? "}
+            <span style={{ color: "var(--violet)", cursor: "pointer", fontWeight: 600 }} onClick={() => setTab(tab === "login" ? "register" : "login")}>
+              {tab === "login" ? "Register" : "Sign In"}
+            </span>
+          </div>
+        </div>
+        <button className="auth-close" onClick={onClose}>✕</button>
       </div>
     </div>
   );
@@ -563,6 +614,7 @@ function ViewerScreen({ stream, onBack }) {
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState("home");
   const [selectedStream, setSelectedStream] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     const tag = document.createElement("style");
@@ -578,13 +630,23 @@ export default function App() {
 
   return (
     <div className="app">
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       <nav className="sidebar">
         <div className="sidebar-logo">M</div>
-        <button className={`nav-btn ${currentScreen === "home" ? "active" : ""}`} onClick={() => setCurrentScreen("home")}>🏠</button>
-        <button className={`nav-btn ${currentScreen === "map" ? "active" : ""}`} onClick={() => setCurrentScreen("map")}>🗺️</button>
-        <button className="nav-btn go-live" onClick={() => setCurrentScreen("golive")}>➕</button>
+        <button className={`nav-btn ${currentScreen === "home" ? "active" : ""}`} onClick={() => setCurrentScreen("home")}>
+          🏠<span className="nav-btn-label">Home</span>
+        </button>
+        <button className={`nav-btn ${currentScreen === "map" ? "active" : ""}`} onClick={() => setCurrentScreen("map")}>
+          🗺️<span className="nav-btn-label">Map</span>
+        </button>
+        <button className="nav-btn go-live" onClick={() => setCurrentScreen("golive")}>
+          <div className="go-live-dot" />
+          <span className="nav-btn-label" style={{ color: "var(--live-red)" }}>Go live</span>
+        </button>
         <div className="nav-spacer" />
-        <button className="nav-btn">👤</button>
+        <button className="nav-btn" onClick={() => setShowAuth(true)}>
+          👤<span className="nav-btn-label">Account</span>
+        </button>
       </nav>
       <main className="main">
         {currentScreen === "home" && <HomeScreen onStreamClick={openStream} />}
