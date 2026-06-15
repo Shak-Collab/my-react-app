@@ -5,6 +5,7 @@ import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
 import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { APP_ID, client } from "./agora";
 
 const MOCK_STREAMS = [
   { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
@@ -360,66 +361,50 @@ function MapScreen({ onStreamClick }) {
 
 function GoLiveScreen({ onBack }) {
   const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const intervalRef = useRef(null);
-  const [camOn, setCamOn] = useState(false);
   const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Travel");
   const [viewers, setViewers] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [camError, setCamError] = useState(false);
+  const intervalRef = useRef(null);
+  const localTrackRef = useRef({ video: null, audio: null });
 
-  useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-  }, []);
-
-  async function startCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setCamOn(true);
-      setCamError(false);
-    } catch {
-      setCamError(true);
-    }
+  async function startLive() {
+    if (!title.trim()) return;
+    await client.setClientRole("host");
+    await client.join(APP_ID, "main-channel", null, auth.currentUser?.uid || null);
+    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+    localTrackRef.current = { audio: audioTrack, video: videoTrack };
+    videoTrack.play(videoRef.current);
+    await client.publish([audioTrack, videoTrack]);
+    setIsLive(true);
+    setViewers(1);
+    setDuration(0);
+    intervalRef.current = setInterval(() => setDuration(d => d + 1), 1000);
   }
 
-  function stopCamera() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-  }
-
-  function toggleCam() {
-    if (!streamRef.current) return;
-    const videoTrack = streamRef.current.getVideoTracks()[0];
-    if (videoTrack) { videoTrack.enabled = !videoTrack.enabled; setCamOn(videoTrack.enabled); }
+  async function stopLive() {
+    const { audio, video } = localTrackRef.current;
+    if (audio) audio.stop(), audio.close();
+    if (video) video.stop(), video.close();
+    await client.unpublish();
+    await client.leave();
+    setIsLive(false);
+    clearInterval(intervalRef.current);
+    setViewers(0);
+    setDuration(0);
   }
 
   function toggleMic() {
-    if (!streamRef.current) return;
-    const audioTrack = streamRef.current.getAudioTracks()[0];
-    if (audioTrack) { audioTrack.enabled = !audioTrack.enabled; setMicOn(audioTrack.enabled); }
+    const { audio } = localTrackRef.current;
+    if (audio) { audio.setEnabled(!micOn); setMicOn(m => !m); }
   }
 
-  function startLive() {
-    if (!title.trim()) return;
-    setIsLive(true); setViewers(1); setDuration(0);
-    intervalRef.current = setInterval(() => {
-      setDuration(d => d + 1);
-      setViewers(v => Math.max(1, v + Math.floor(Math.random() * 5) - 1));
-    }, 1000);
-  }
-
-  function stopLive() {
-    setIsLive(false);
-    clearInterval(intervalRef.current);
-    setViewers(0); setDuration(0);
+  function toggleCam() {
+    const { video } = localTrackRef.current;
+    if (video) { video.setEnabled(!camOn); setCamOn(c => !c); }
   }
 
   function formatDuration(s) {
@@ -429,21 +414,12 @@ function GoLiveScreen({ onBack }) {
   return (
     <div className="golive-screen screen-enter">
       <div className="golive-preview">
-        {!camError ? (
-          <video ref={videoRef} className="golive-video" autoPlay muted playsInline />
-        ) : (
-          <div className="golive-no-cam">
-            <div className="golive-no-cam-icon">📷</div>
-            <div>Camera unavailable</div>
-            <div style={{ fontSize: 12 }}>Check your browser permissions</div>
-          </div>
-        )}
+        <div ref={videoRef} style={{ width: "100%", height: "100%", background: "#000" }} />
         <div className="golive-overlay-top">
-          <button className="viewer-back" onClick={() => { stopCamera(); stopLive(); onBack(); }}>←</button>
+          <button className="viewer-back" onClick={() => { stopLive(); onBack(); }}>←</button>
           {isLive && (
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <div className="golive-live-badge"><div className="live-dot" />LIVE</div>
-              <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>👁 {viewers}</div>
               <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "white" }}>⏱ {formatDuration(duration)}</div>
             </div>
           )}
@@ -497,7 +473,6 @@ function GoLiveScreen({ onBack }) {
     </div>
   );
 }
-
 function ViewerScreen({ streams, onBack }) {
   const { id } = useParams();
   const stream = streams.find(s => String(s.id) === id);
