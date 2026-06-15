@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 import * as topojson from "topojson-client";
 import { auth, db } from "./firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
 import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
 
@@ -573,11 +573,26 @@ useEffect(() => {
   );
 }
 
-function AuthModal({ onClose }) {
+function AuthModal({ onClose, user }) {
   const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+
+  if (user) {
+    return (
+      <div className="auth-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="auth-modal-wrap" style={{ position: "relative" }}>
+          <div className="auth-modal">
+            <div className="auth-title">👤 Profile</div>
+            <div style={{ fontSize: 14, color: "var(--sub)" }}>{user.email}</div>
+            <button className="auth-submit" onClick={() => { signOut(auth); onClose(); }}>Sign Out</button>
+          </div>
+          <button className="auth-close" onClick={onClose}>✕</button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     try {
@@ -635,6 +650,12 @@ function AuthModal({ onClose }) {
 }
 export default function App() {
   const [showAuth, setShowAuth] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const tag = document.createElement("style");
@@ -645,7 +666,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} user={user} />}
       <div className="app">
         <nav className="sidebar">
           <div className="sidebar-logo">M</div>
@@ -656,7 +677,21 @@ export default function App() {
             <span className="nav-btn-label" style={{ color: "var(--live-red)" }}>Go live</span>
           </button>
           <div className="nav-spacer" />
-          <button className="nav-btn" onClick={() => setShowAuth(true)}>👤<span className="nav-btn-label">Account</span></button>
+          <button className="nav-btn" onClick={() => setShowAuth(true)}>
+  {user ? (
+    <>
+      <span style={{fontSize: 10, fontWeight: 700, color: "var(--text)", lineHeight: 1.2, textAlign: "center", maxWidth: 52, wordBreak: "break-all"}}>
+        {user.email.split("@")[0].slice(0, 8)}
+      </span>
+      <span className="nav-btn-label">Profile</span>
+    </>
+  ) : (
+    <>
+      <span>👤</span>
+      <span className="nav-btn-label">Sign In</span>
+    </>
+  )}
+</button>
         </nav>
         <main className="main">
           <Routes>
