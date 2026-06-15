@@ -3,9 +3,9 @@ import * as d3 from "d3";
 import * as topojson from "topojson-client";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
-import { APP_ID, client } from "./agora";
+import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, doc } from "firebase/firestore";import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { Room, RoomEvent } from "livekit-client";
+import { LIVEKIT_URL } from "./livekit";
 
 const MOCK_STREAMS = [
   { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
@@ -162,14 +162,14 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 function StreamCard({ stream, onClick }) {
   return (
     <div className="stream-card" onClick={() => onClick(stream)}>
-      <div className="stream-thumb" style={{ background: `radial-gradient(ellipse at center, ${stream.color}18, #F0F0F5)` }}>
-        <span>{stream.emoji}</span>
+      <div className="stream-thumb" style={{ background: `radial-gradient(ellipse at center, #FF3B5C18, #F0F0F5)` }}>
+        <span>{stream.emoji || "🎥"}</span>
         <div className="live-badge"><div className="live-dot" />LIVE</div>
-        <div className="viewer-count">👁 {stream.viewers.toLocaleString()}</div>
+        <div className="viewer-count">👁 {(stream.viewers || 0).toLocaleString()}</div>
       </div>
       <div className="stream-info">
         <div className="stream-title">{stream.title}</div>
-        <div className="stream-location">{stream.country} {stream.location}</div>
+        <div className="stream-location">{stream.hostEmail || "Unknown"}</div>
       </div>
     </div>
   );
@@ -177,7 +177,17 @@ function StreamCard({ stream, onClick }) {
 
 function HomeScreen({ onStreamClick }) {
   const [activeCategory, setActiveCategory] = useState("All");
-  const filtered = activeCategory === "All" ? MOCK_STREAMS : MOCK_STREAMS.filter(s => s.category === activeCategory);
+  const [streams, setStreams] = useState([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "streams"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, snap => {
+      setStreams(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
+
+  const filtered = activeCategory === "All" ? streams : streams.filter(s => s.category === activeCategory);
   return (
     <div className="home screen-enter">
       <div className="home-header"><div className="home-title"><span style={{filter: "grayscale(1) sepia(1) saturate(5) hue-rotate(300deg)"}}>🌐</span> <span>Momentra</span></div></div>
@@ -189,7 +199,7 @@ function HomeScreen({ onStreamClick }) {
       <div className="stream-scroll">
         <div style={{ marginBottom: 16 }}>
           <div className="section-label">🔥 Trending Now</div>
-          <div className="stream-grid">{MOCK_STREAMS.slice(0, 3).map(s => <StreamCard key={s.id} stream={s} onClick={onStreamClick} />)}</div>
+          <div className="stream-grid">{streams.slice(0, 3).map(s => <StreamCard key={s.id} stream={s} onClick={onStreamClick} />)}</div>
         </div>
         <div>
           <div className="section-label">All Live Streams</div>
@@ -366,45 +376,72 @@ function GoLiveScreen({ onBack }) {
   const [isLive, setIsLive] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Travel");
-  const [viewers, setViewers] = useState(0);
   const [duration, setDuration] = useState(0);
   const intervalRef = useRef(null);
-  const localTrackRef = useRef({ video: null, audio: null });
+  const roomRef = useRef(null);
+
+  async function getToken() {
+    const response = await fetch("https://us-central1-social-001-458b1.cloudfunctions.net/getLiveKitToken", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        roomName: "main-channel", 
+        participantName: auth.currentUser?.email || "host" 
+      })
+    });
+    const data = await response.json();
+    return data.token;
+  }
 
   async function startLive() {
-    if (!title.trim()) return;
-    await client.setClientRole("host");
-    await client.join(APP_ID, "main-channel", null, auth.currentUser?.uid || null);
-    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-    localTrackRef.current = { audio: audioTrack, video: videoTrack };
-    videoTrack.play(videoRef.current);
-    await client.publish([audioTrack, videoTrack]);
-    setIsLive(true);
-    setViewers(1);
-    setDuration(0);
-    intervalRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+    if (!title.trim() || isLive) return;
+    try {
+      const token = await getToken();
+      const room = new Room();
+      roomRef.current = room;
+      await room.connect(LIVEKIT_URL, token);
+      await room.localParticipant.enableCameraAndMicrophone();
+      const videoTrack = room.localParticipant.getTrackPublication("camera")?.track;
+      if (videoTrack && videoRef.current) videoTrack.attach(videoRef.current);
+      await addDoc(collection(db, "streams"), {
+        title,
+        category,
+        hostEmail: auth.currentUser?.email || "anonymous",
+        hostId: auth.currentUser?.uid || "anonymous",
+        viewers: 0,
+        createdAt: serverTimestamp(),
+        active: true,
+      });
+      setIsLive(true);
+      setDuration(0);
+      intervalRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+    } catch (err) {
+      alert("Failed to start stream: " + err.message);
+    }
   }
 
   async function stopLive() {
-    const { audio, video } = localTrackRef.current;
-    if (audio) audio.stop(), audio.close();
-    if (video) video.stop(), video.close();
-    await client.unpublish();
-    await client.leave();
+    if (roomRef.current) {
+      await roomRef.current.disconnect();
+      roomRef.current = null;
+    }
     setIsLive(false);
     clearInterval(intervalRef.current);
-    setViewers(0);
     setDuration(0);
   }
 
   function toggleMic() {
-    const { audio } = localTrackRef.current;
-    if (audio) { audio.setEnabled(!micOn); setMicOn(m => !m); }
+    if (roomRef.current) {
+      roomRef.current.localParticipant.setMicrophoneEnabled(!micOn);
+      setMicOn(m => !m);
+    }
   }
 
   function toggleCam() {
-    const { video } = localTrackRef.current;
-    if (video) { video.setEnabled(!camOn); setCamOn(c => !c); }
+    if (roomRef.current) {
+      roomRef.current.localParticipant.setCameraEnabled(!camOn);
+      setCamOn(c => !c);
+    }
   }
 
   function formatDuration(s) {
@@ -414,7 +451,7 @@ function GoLiveScreen({ onBack }) {
   return (
     <div className="golive-screen screen-enter">
       <div className="golive-preview">
-        <div ref={videoRef} style={{ width: "100%", height: "100%", background: "#000" }} />
+        <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <div className="golive-overlay-top">
           <button className="viewer-back" onClick={() => { stopLive(); onBack(); }}>←</button>
           {isLive && (
@@ -451,10 +488,6 @@ function GoLiveScreen({ onBack }) {
           <>
             <div className="golive-live-stats">
               <div className="golive-stat">
-                <div className="golive-stat-num">{viewers}</div>
-                <div className="golive-stat-label">Viewers</div>
-              </div>
-              <div className="golive-stat">
                 <div className="golive-stat-num">{formatDuration(duration)}</div>
                 <div className="golive-stat-label">Duration</div>
               </div>
@@ -473,51 +506,90 @@ function GoLiveScreen({ onBack }) {
     </div>
   );
 }
-function ViewerScreen({ streams, onBack }) {
+function ViewerScreen({ onBack }) {
   const { id } = useParams();
-  const stream = streams.find(s => String(s.id) === id);
-
-  if (!stream) return <div style={{ color: "var(--text)", padding: 40 }}>Stream not found.</div>;
+  const [stream, setStream] = useState(null);
   const [hearts, setHearts] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const videoRef = useRef(null);
+  const roomRef = useRef(null);
 
-useEffect(() => {
-  const q = query(collection(db, "chats", String(stream.id), "messages"), orderBy("createdAt"));
-  const unsub = onSnapshot(q, snap => {
-    setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
-  return () => unsub();
-}, [stream.id]);
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "streams", id), snap => {
+      if (snap.exists()) setStream({ id: snap.id, ...snap.data() });
+    });
+    return () => unsub();
+  }, [id]);
+
+  useEffect(() => {
+    const q = query(collection(db, "chats", id, "messages"), orderBy("createdAt"));
+    const unsub = onSnapshot(q, snap => {
+      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [id]);
+
+  useEffect(() => {
+    async function connectAsViewer() {
+      try {
+        const response = await fetch("https://us-central1-social-001-458b1.cloudfunctions.net/getLiveKitToken", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            roomName: "main-channel", 
+            participantName: "viewer-" + Date.now()
+          })
+        });
+        const data = await response.json();
+        const token = data.token;
+        const room = new Room();
+        roomRef.current = room;
+        room.on(RoomEvent.TrackSubscribed, (track) => {
+          if (track.kind === "video" && videoRef.current) {
+            track.attach(videoRef.current);
+          }
+        });
+        await room.connect(LIVEKIT_URL, token);
+      } catch (err) {
+        console.error("Viewer connect error:", err);
+      }
+    }
+    connectAsViewer();
+    return () => { if (roomRef.current) roomRef.current.disconnect(); };
+  }, []);
+
+  if (!stream) return <div style={{ color: "var(--text)", padding: 40 }}>Loading...</div>;
 
   const addHeart = () => {
-    const id = Date.now();
-    setHearts(h => [...h, { id, x: Math.random() * 30 }]);
-    setTimeout(() => setHearts(h => h.filter(i => i.id !== id)), 1200);
+    const heartId = Date.now();
+    setHearts(h => [...h, { id: heartId, x: Math.random() * 30 }]);
+    setTimeout(() => setHearts(h => h.filter(i => i.id !== heartId)), 1200);
   };
 
   const sendMessage = async () => {
-  if (!chatInput.trim()) return;
-  await addDoc(collection(db, "chats", String(stream.id), "messages"), {
-    user: auth.currentUser?.email || "anonymous",
-    text: chatInput,
-    createdAt: serverTimestamp()
-  });
-  setChatInput("");
-};
+    if (!chatInput.trim()) return;
+    await addDoc(collection(db, "chats", id, "messages"), {
+      user: auth.currentUser?.email || "anonymous",
+      text: chatInput,
+      createdAt: serverTimestamp()
+    });
+    setChatInput("");
+  };
 
   return (
     <div className="viewer-screen screen-enter">
       <div className="viewer-video">
-        <span>{stream.emoji}</span>
+        <video ref={videoRef} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", top: 0, left: 0 }} />
+        <span style={{ position: "relative", zIndex: 1 }}>{stream.emoji || "🎥"}</span>
         <div className="viewer-video-label">LIVE DATA STREAM</div>
         <div className="viewer-top">
           <button className="viewer-back" onClick={onBack}>←</button>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div className="viewer-title">{stream.title}</div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>📍 {stream.location}</div>
+            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>👤 {stream.hostEmail}</div>
           </div>
-          <div className="viewer-viewers">👁 {stream.viewers.toLocaleString()}</div>
+          <div className="viewer-viewers">👁 {(stream.viewers || 0).toLocaleString()}</div>
         </div>
         <div className="viewer-bottom">
           <button className="reaction-btn" onClick={addHeart}>❤️</button>
@@ -529,7 +601,6 @@ useEffect(() => {
       <div className="chat-panel">
         <div className="chat-header">
           <div className="chat-title">💬 Chat</div>
-          <div style={{ fontSize: 12, color: "var(--sub)" }}>{stream.country}</div>
         </div>
         <div className="chat-messages">
           {messages.map((m, i) => (
@@ -673,7 +744,7 @@ export default function App() {
             <Route path="/" element={<HomeScreen onStreamClick={(stream) => window.location.href = `/stream/${stream.id}`} />} />
             <Route path="/map" element={<MapScreen onStreamClick={(stream) => window.location.href = `/stream/${stream.id}`} />} />
             <Route path="/golive" element={<GoLiveScreen onBack={() => window.location.href = "/"} />} />
-            <Route path="/stream/:id" element={<ViewerScreen streams={MOCK_STREAMS} onBack={() => window.location.href = "/map"} />} />
+            <Route path="/stream/:id" element={<ViewerScreen onBack={() => window.location.href = "/map"} />} />
           </Routes>
         </main>
       </div>
