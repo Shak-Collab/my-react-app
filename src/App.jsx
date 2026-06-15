@@ -3,7 +3,7 @@ import * as d3 from "d3";
 import * as topojson from "topojson-client";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, doc } from "firebase/firestore";import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, doc, updateDoc, where } from "firebase/firestore";import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
 import { Room, RoomEvent } from "livekit-client";
 import { LIVEKIT_URL } from "./livekit";
 
@@ -180,7 +180,7 @@ function HomeScreen({ onStreamClick }) {
   const [streams, setStreams] = useState([]);
 
   useEffect(() => {
-    const q = query(collection(db, "streams"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "streams"), where("active", "==", true), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, snap => {
       setStreams(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -379,6 +379,7 @@ function GoLiveScreen({ onBack }) {
   const [duration, setDuration] = useState(0);
   const intervalRef = useRef(null);
   const roomRef = useRef(null);
+  const streamDocRef = useRef(null);
 
   async function getToken() {
     const response = await fetch("https://us-central1-social-001-458b1.cloudfunctions.net/getLiveKitToken", {
@@ -403,7 +404,7 @@ function GoLiveScreen({ onBack }) {
       await room.localParticipant.enableCameraAndMicrophone();
       const videoTrack = room.localParticipant.getTrackPublication("camera")?.track;
       if (videoTrack && videoRef.current) videoTrack.attach(videoRef.current);
-      await addDoc(collection(db, "streams"), {
+      const docRef = await addDoc(collection(db, "streams"), {
         title,
         category,
         hostEmail: auth.currentUser?.email || "anonymous",
@@ -412,6 +413,7 @@ function GoLiveScreen({ onBack }) {
         createdAt: serverTimestamp(),
         active: true,
       });
+      streamDocRef.current = docRef;
       setIsLive(true);
       setDuration(0);
       intervalRef.current = setInterval(() => setDuration(d => d + 1), 1000);
@@ -424,6 +426,10 @@ function GoLiveScreen({ onBack }) {
     if (roomRef.current) {
       await roomRef.current.disconnect();
       roomRef.current = null;
+    }
+    if (streamDocRef.current) {
+      await updateDoc(streamDocRef.current, { active: false });
+      streamDocRef.current = null;
     }
     setIsLive(false);
     clearInterval(intervalRef.current);
@@ -514,6 +520,7 @@ function ViewerScreen({ onBack }) {
   const [messages, setMessages] = useState([]);
   const videoRef = useRef(null);
   const roomRef = useRef(null);
+  const streamDocRef = useRef(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "streams", id), snap => {
