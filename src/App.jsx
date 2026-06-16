@@ -3,9 +3,10 @@ import * as d3 from "d3";
 import * as topojson from "topojson-client";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, doc, updateDoc, where } from "firebase/firestore";import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { collection, addDoc, onSnapshot, orderBy, query, serverTimestamp, doc, updateDoc, where, setDoc, getDoc } from "firebase/firestore";
 import { Room, RoomEvent } from "livekit-client";
 import { LIVEKIT_URL } from "./livekit";
+import { BrowserRouter, Routes, Route, useNavigate, useParams } from "react-router-dom";
 
 const MOCK_STREAMS = [
   { id: 1, title: "Walking through Shibuya at night", category: "Walking", location: "Tokyo, Japan", country: "🇯🇵", viewers: 3241, color: "#FF3B5C", emoji: "🚶", lat: 35.68, lon: 139.69 },
@@ -31,15 +32,15 @@ const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --void: #F5F5F7;
-  --surface: #FFFFFF;
-  --card: #F0F0F5;
-  --card2: #EAEAF0;
-  --border: #DCDCE8;
-  --violet: #E00707;
+  --void: #0A0E1A;
+  --surface: #11162A;
+  --card: #161B33;
+  --card2: #1D2340;
+  --border: #2A3155;
+  --violet: #c14e4e;
   --live-red: #CC0000;
-  --text: #111122;
-  --sub: #666688;
+  --text: #F0F0F8;
+  --sub: #8888AA;
 }
 body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 .app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
@@ -626,7 +627,61 @@ function ViewerScreen({ onBack }) {
   );
 }
 
-function AuthModal({ onClose, user }) {
+function CreatorForm({ onClose, user, onSuccess }) {
+  const [creatorName, setCreatorName] = useState("");
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+
+  const handleSubmit = async () => {
+    if (!creatorName.trim() || !username.trim()) return;
+    try {
+      await setDoc(doc(db, "creators", user.uid), {
+        userId: user.uid,
+        creatorName,
+        username,
+        bio,
+        email: user.email,
+        createdAt: serverTimestamp(),
+        isVerified: false,
+      });
+      await setDoc(doc(db, "users", user.uid), { role: "creator", email: user.email }, { merge: true });
+      onSuccess();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  return (
+    <div className="auth-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="auth-modal-wrap" style={{ position: "relative" }}>
+        <div className="auth-modal">
+          <div>
+            <div className="auth-title">🎬 Become a Creator</div>
+            <div className="auth-subtitle">Set up your creator profile to start uploading content.</div>
+          </div>
+          <div className="auth-field">
+            <label>Creator Name</label>
+            <input placeholder="Your creator name" value={creatorName} onChange={e => setCreatorName(e.target.value)} />
+          </div>
+          <div className="auth-field">
+            <label>Username</label>
+            <input placeholder="your-username" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} />
+          </div>
+          <div className="auth-field">
+            <label>Bio</label>
+            <input placeholder="Tell people about yourself" value={bio} onChange={e => setBio(e.target.value)} />
+          </div>
+          <button className="auth-submit" onClick={handleSubmit} disabled={!creatorName.trim() || !username.trim()}>
+            Create Creator Profile
+          </button>
+        </div>
+        <button className="auth-close" onClick={onClose}>✕</button>
+      </div>
+    </div>
+  );
+}
+
+function AuthModal({ onClose, user, userRole, onBecomeCreator }) {
   const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -639,6 +694,11 @@ function AuthModal({ onClose, user }) {
           <div className="auth-modal">
             <div className="auth-title">👤 Profile</div>
             <div style={{ fontSize: 14, color: "var(--sub)" }}>{user.email}</div>
+            {userRole === "creator" ? (
+              <div style={{ fontSize: 13, color: "var(--violet)", fontWeight: 600 }}>✓ You're a Creator</div>
+            ) : (
+              <button className="auth-submit" onClick={() => { onClose(); onBecomeCreator(); }}>Become a Creator</button>
+            )}
             <button className="auth-submit" onClick={() => { signOut(auth); onClose(); }}>Sign Out</button>
           </div>
           <button className="auth-close" onClick={onClose}>✕</button>
@@ -650,7 +710,13 @@ function AuthModal({ onClose, user }) {
   const handleSubmit = async () => {
     try {
       if (tab === "register") {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", cred.user.uid), {
+          email,
+          name,
+          role: "customer",
+          createdAt: serverTimestamp(),
+        });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -704,9 +770,19 @@ function AuthModal({ onClose, user }) {
 export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [showCreatorForm, setShowCreatorForm] = useState(false);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u) {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        if (snap.exists()) setUserRole(snap.data().role);
+      } else {
+        setUserRole(null);
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -719,7 +795,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} user={user} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} user={user} userRole={userRole} onBecomeCreator={() => setShowCreatorForm(true)} />}
+{showCreatorForm && <CreatorForm onClose={() => setShowCreatorForm(false)} user={user} onSuccess={() => { setUserRole("creator"); setShowCreatorForm(false); }} />}
       <div className="app">
         <nav className="sidebar">
           <div className="sidebar-logo">M</div>
