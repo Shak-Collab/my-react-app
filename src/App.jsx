@@ -513,6 +513,57 @@ function GoLiveScreen({ onBack }) {
     </div>
   );
 }
+
+function CreatorPage() {
+  const { username } = useParams();
+  const [creator, setCreator] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCreator() {
+      const q = query(collection(db, "creators"), where("username", "==", username));
+      const unsub = onSnapshot(q, snap => {
+        if (!snap.empty) {
+          setCreator({ id: snap.docs[0].id, ...snap.docs[0].data() });
+        } else {
+          setCreator(null);
+        }
+        setLoading(false);
+      });
+      return unsub;
+    }
+    const unsubPromise = fetchCreator();
+    return () => { unsubPromise.then(unsub => unsub && unsub()); };
+  }, [username]);
+
+  if (loading) return <div style={{ color: "var(--text)", padding: 40 }}>Loading...</div>;
+  if (!creator) return <div style={{ color: "var(--text)", padding: 40 }}>Creator not found.</div>;
+
+  return (
+    <div className="home screen-enter">
+      <div style={{ padding: "40px 28px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 600 }}>
+        <div style={{ width: 96, height: 96, borderRadius: "50%", background: "var(--violet)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, color: "white", fontWeight: 700 }}>
+          {creator.creatorName.charAt(0).toUpperCase()}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, color: "var(--sub)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Creator Name</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", fontFamily: "'Space Grotesk', sans-serif" }}>{creator.creatorName}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "var(--sub)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Username</div>
+            <div style={{ fontSize: 14, color: "var(--violet)" }}>@{creator.username}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "var(--sub)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Bio</div>
+            <div style={{ fontSize: 14, color: "var(--text)", maxWidth: 600 }}>{creator.bio}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ViewerScreen({ onBack }) {
   const { id } = useParams();
   const [stream, setStream] = useState(null);
@@ -681,7 +732,7 @@ function CreatorForm({ onClose, user, onSuccess }) {
   );
 }
 
-function AuthModal({ onClose, user, userRole, onBecomeCreator }) {
+function AuthModal({ onClose, user, userRole, onBecomeCreator, onViewCreatorPage }) {
   const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -695,7 +746,10 @@ function AuthModal({ onClose, user, userRole, onBecomeCreator }) {
             <div className="auth-title">👤 Profile</div>
             <div style={{ fontSize: 14, color: "var(--sub)" }}>{user.email}</div>
             {userRole === "creator" ? (
-              <div style={{ fontSize: 13, color: "var(--violet)", fontWeight: 600 }}>✓ You're a Creator</div>
+              <>
+                <div style={{ fontSize: 13, color: "var(--violet)", fontWeight: 600 }}>✓ You're a Creator</div>
+                <button className="auth-submit" style={{ background: "var(--violet)" }} onClick={() => { onClose(); onViewCreatorPage(); }}>View My Creator Page</button>
+              </>
             ) : (
               <button className="auth-submit" onClick={() => { onClose(); onBecomeCreator(); }}>Become a Creator</button>
             )}
@@ -795,7 +849,10 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} user={user} userRole={userRole} onBecomeCreator={() => setShowCreatorForm(true)} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} user={user} userRole={userRole} onBecomeCreator={() => setShowCreatorForm(true)} onViewCreatorPage={async () => {
+            const snap = await getDoc(doc(db, "creators", user.uid));
+            if (snap.exists()) window.location.href = `/creator/${snap.data().username}`;
+          }} />}
 {showCreatorForm && <CreatorForm onClose={() => setShowCreatorForm(false)} user={user} onSuccess={() => { setUserRole("creator"); setShowCreatorForm(false); }} />}
       <div className="app">
         <nav className="sidebar">
@@ -829,6 +886,7 @@ export default function App() {
             <Route path="/map" element={<MapScreen onStreamClick={(stream) => window.location.href = `/stream/${stream.id}`} />} />
             <Route path="/golive" element={<GoLiveScreen onBack={() => window.location.href = "/"} />} />
             <Route path="/stream/:id" element={<ViewerScreen onBack={() => window.location.href = "/map"} />} />
+            <Route path="/creator/:username" element={<CreatorPage />} />
           </Routes>
         </main>
       </div>
